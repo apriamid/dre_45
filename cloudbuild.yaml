@@ -1,0 +1,17 @@
+steps:
+- name: gcr.io/cloud-builders/docker
+  args: ['build', '-t', 'asia-southeast2-docker.pkg.dev/sat-kapita-selekta-b/ks-2025-1/master-672023169:v.1.0.release', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'asia-southeast2-docker.pkg.dev/sat-kapita-selekta-b/ks-2025-1/master-672023169:v.1.0.release']
+- name: 'gcr.io/cloud-builders/gcloud'
+  args:
+  - 'run'
+  - 'deploy'
+  - 'andreas-672023169'
+  - '--image'
+  - 'asia-southeast2-docker.pkg.dev/sat-kapita-selekta-b/ks-2025-1/master-672023169:v.1.0.release'
+  - '--region'
+  - 'asia-southeast2'
+  - '--platform'
+  - 'managed'
+  - '--allow-unauthenticated'

@@ -1,0 +1,61 @@
+
+body {
+margin: 0;
+padding: 0;
+font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+background-color: #f4f6f8; 
+display: flex;
+justify-content: center;
+align-items: center;
+height: 100vh;
+
+}
+.login-card {
+background-color: #ffffff; 
+padding: 40px 30px;
+border-radius: 12px;
+box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+width: 320px;
+}
+.login-header {
+text-align: center;
+margin-bottom: 25px;
+}
+.login-header h2 {
+margin: 0;
+font-size: 24px;
+color: #333;
+}
+
+
+.webix_el_box input.webix_text, 
+.webix_el_box input.webix_password {
+border: 1px solid #ccc;
+border-radius: 6px;
+padding: 10px;
+font-size: 14px;
+width: 100%;
+box-sizing: border-box;
+}
+.webix_el_box label {
+color: #555;
+font-weight: 500;
+margin-bottom: 5px;
+}
+
+
+.webix_primary {
+background-color: #007bff !important;
+color: #fff !important;
+border-radius: 6px !important;
+font-weight: 600;
+transition: background-color 0.3s;
+}
+.webix_primary:hover {
+background-color: #0056b3 !important;
+}
+
+
+.webix_el_box {
+margin-bottom: 15px;
+}

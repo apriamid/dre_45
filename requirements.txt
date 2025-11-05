@@ -1,0 +1,11 @@
+flask
+flask-pymongo
+flask-cors
+gunicorn
+eventlet
+pymongo
+pyJwt
+argon2-cffi
+dnspython
+Pydantic
+Bleach
