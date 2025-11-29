@@ -140,5 +140,8 @@ def api_userinfo():
     return jsonify({"success": True, "username": data["username"], "role": data["role"]}), 200
 
 
+# if __name__ == "__main__":
+#     app.run(debug=True,host="0.0.0.0")
+
 if __name__ == "__main__":
-    app.run(debug=True,host="0.0.0.0")
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
