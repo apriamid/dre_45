@@ -26,48 +26,48 @@ app.register_blueprint(penjualan_bp, url_prefix="/api/penjualan")
 app.register_blueprint(supplier_bp, url_prefix="/api/supplier")
 
 
-@app.before_request
-def before_request_func():
-    """
-    Sebagai front-gate: memeriksa token pada setiap request non-public.
-    - API routes -> kembalikan JSON 401 jika tidak valid (tidak redirect)
-    - HTML protected pages -> redirect ke /login bila tidak valid
-    """
-    path = request.path
+# @app.before_request
+# def before_request_func():
+#     """
+#     Sebagai front-gate: memeriksa token pada setiap request non-public.
+#     - API routes -> kembalikan JSON 401 jika tidak valid (tidak redirect)
+#     - HTML protected pages -> redirect ke /login bila tidak valid
+#     """
+#     path = request.path
 
-    PUBLIC_ROUTES = {"/login", "/", "/favicon.ico"}
+#     PUBLIC_ROUTES = {"/login", "/", "/favicon.ico"}
   
-    if path.startswith("/static/"):
-        return None
-    if path in PUBLIC_ROUTES:
-        return None
+#     if path.startswith("/static/"):
+#         return None
+#     if path in PUBLIC_ROUTES:
+#         return None
 
-    token = request.cookies.get("token")
-    if path.startswith("/api/"):
-        if not token:
-            return jsonify({"success": False, "message": "Unauthorized"}), 401
+#     token = request.cookies.get("token")
+#     if path.startswith("/api/"):
+#         if not token:
+#             return jsonify({"success": False, "message": "Unauthorized"}), 401
 
-        session_data = session_manager.verify_token(token)
-        if not session_data:
-            return jsonify({"success": False, "message": "Invalid or expired token"}), 401
+#         session_data = session_manager.verify_token(token)
+#         if not session_data:
+#             return jsonify({"success": False, "message": "Invalid or expired token"}), 401
 
-        g.user = session_data
-        return None
-    if not token:
-        return redirect(url_for("login"))
+#         g.user = session_data
+#         return None
+#     if not token:
+#         return redirect(url_for("login"))
 
-    session_data = session_manager.verify_token(token)
-    if not session_data:
-        resp = make_response(redirect(url_for("login")))
-        resp.delete_cookie("token", path="/")
-        return resp
+#     session_data = session_manager.verify_token(token)
+#     if not session_data:
+#         resp = make_response(redirect(url_for("login")))
+#         resp.delete_cookie("token", path="/")
+#         return resp
 
-    g.user = session_data
-    return None
+#     g.user = session_data
+#     return None
 
-@app.route("/")
-def index():
-    return redirect(url_for("login"))
+# @app.route("/")
+# def index():
+#     return redirect(url_for("login"))
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -140,4 +140,4 @@ def api_userinfo():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(debug=True,host="0.0.0.0")
