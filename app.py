@@ -95,7 +95,6 @@ def login():
 def logout():
     token = request.cookies.get("token")
     if token:
-        # hapus session di server
         session_manager.remove_token(token)
 
     resp = make_response(redirect(url_for("login")))
@@ -140,8 +139,6 @@ def api_userinfo():
     return jsonify({"success": True, "username": data["username"], "role": data["role"]}), 200
 
 
-# if __name__ == "__main__":
-#     app.run(debug=True,host="0.0.0.0")
-
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    app.run(debug=True,host="0.0.0.0")
+

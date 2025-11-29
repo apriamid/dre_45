@@ -4,8 +4,8 @@ flask-cors
 gunicorn
 eventlet
 pymongo
-pyJwt
-argon2-cffi
+PyJWT
+bcrypt
 dnspython
-Pydantic
-Bleach
+pydantic
+bleach
