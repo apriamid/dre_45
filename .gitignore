@@ -2,3 +2,4 @@
 setup_users.py
 __init__.py
 **/__venv__/*
+.vscode
