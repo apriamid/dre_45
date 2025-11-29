@@ -7,7 +7,7 @@ steps:
   args:
   - 'run'
   - 'deploy'
-  - 'andreas-672023169'
+  - 'projectfinal-672023169'
   - '--image'
   - 'asia-southeast2-docker.pkg.dev/sat-kapita-selekta-b/ks-2025-1/projekfinal-672023169:v.1.0.release'
   - '--region'

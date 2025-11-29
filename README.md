@@ -1,1 +1,0 @@
-masih kosong

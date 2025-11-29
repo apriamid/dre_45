@@ -1,5 +1,5 @@
 #Builder Stage
-FROM python:3.12-slim-bullseye As builder
+FROM python:3.11.8-slim-bullseye As Builder
 
 RUN apt-get update -y
 RUN apt-get upgrade -y
@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 #operational stage
-FROM python:3.12-slim-bullseye 
+FROM python:3.11.8-slim-bullseye
 
 RUN apt-get update -y
 RUN apt-get upgrade -y
@@ -29,5 +29,5 @@ ENV CLOUD_APPS CLOUD_RUN
 
 WORKDIR /pythonproject
 COPY . ./
-CMD ["gunicorn", "--worker-class", "eventlet", "--bind", "0.0.0.0:$PORT", "--workers", "1", "-t", "4", "app:app"]
+CMD . /opt/venv/bin/activate && exec gunicorn --worker-class eventlet --bind 0.0.0.0:8080 --workers 1 -t 4 app:app
 
