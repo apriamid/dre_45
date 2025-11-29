@@ -1,33 +1,41 @@
-#Builder Stage
-FROM python:3.11.8-slim-bullseye As Builder
+# Builder Stage
+FROM python:3.12-slim-bullseye As builder
 
-RUN apt-get update -y
-RUN apt-get upgrade -y
-RUN apt-get install -y libpq-dev gcc
+# Instal dependensi build dalam satu langkah dan bersihkan cache
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends libpq-dev gcc && \
+    rm -rf /var/lib/apt/lists/*
 
-#create the virtual env
+# Buat virtual env
 RUN python -m venv /opt/venv
-#activate teh virtual env
+
+# Set PATH untuk menggunakan biner dari venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-#operational stage
-FROM python:3.11.8-slim-bullseye
+# ----------------------------------------------------------------------
+# Operational Stage
+# ----------------------------------------------------------------------
+FROM python:3.12-slim-bullseye
 
-RUN apt-get update -y
-RUN apt-get upgrade -y
-RUN apt-get install -y libpq-dev 
-RUN rm -rf /var/lib/apt/lists/*
+# Instal library runtime yang diperlukan (misalnya libpq5) dan bersihkan cache
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends libpq5 && \
+    rm -rf /var/lib/apt/lists/*
 
-#get the virtual env from builder stage
+# Dapatkan virtual env dari builder stage
 COPY --from=builder /opt/venv /opt/venv
 
+# Set PATH dan variabel lingkungan lainnya
 ENV PATH="/opt/venv/bin:$PATH"
 ENV CLOUD_APPS CLOUD_RUN
+ENV PORT 8080 # Set default PORT, tapi Cloud Run akan menimpanya
 
 WORKDIR /pythonproject
 COPY . ./
-CMD . /opt/venv/bin/activate && exec gunicorn --worker-class eventlet --bind 0.0.0.0:8080 --workers 1 -t 4 app:app
 
+# Perintah menjalankan Gunicorn yang sudah dioptimalkan:
+# Menggunakan variabel $PORT yang disuntikkan oleh Cloud Run
+CMD ["gunicorn", "--worker-class", "eventlet", "--bind", "0.0.0.0:$PORT", "--workers", "1", "-t", "4", "app:app"]
