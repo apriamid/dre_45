@@ -1,5 +1,5 @@
 import bcrypt
-from flask import g, request, redirect, url_for, make_response, jsonify
+from flask import g, request, redirect, url_for, make_response
 from common.session_manage import SessionManager
 from common.mongo_connection import MongoConnection
 from config import (

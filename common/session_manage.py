@@ -2,7 +2,7 @@ import jwt
 from common.mongo_connection import MongoConnection
 from config import MONGODB_CONNECTION_STRING, MONGODB_AUTH_DATABASE, MONGODB_SESSION_COLLECTION
 from datetime import datetime, timedelta
-from pymongo import ReturnDocument
+
 
 class SessionManager:
     """Kelas untuk mengelola sesi pengguna menggunakan JWT dan MongoDB."""
