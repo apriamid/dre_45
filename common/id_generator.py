@@ -32,8 +32,6 @@ def generate_karyawan_id(mongo, coll_name, jabatan=None):
             prefix = "K"
     else:
         prefix = "K"
-
-    # Cari nomor terakhir
     col = mongo.db[coll_name]
     q = {"_id": {"$regex": f"^{prefix}\\d+$"}}
     existing = list(col.find(q, {"_id": 1}))
@@ -49,10 +47,8 @@ def generate_karyawan_id(mongo, coll_name, jabatan=None):
     next_num = maxn + 1
     return f"{prefix}{str(next_num).zfill(3)}"
 
-
-
 def generate_supplier_id(mongo, MONGODB_COLLECTION_SUPPLIER):
-    next_num = get_next_numeric_suffix_for_prefix(mongo, MONGODB_COLLECTION_SUPPLIER, "id", "SUP")
+    next_num = get_next_numeric_suffix_for_prefix(mongo, MONGODB_COLLECTION_SUPPLIER, "_id", "SUP") 
     return "SUP" + _zero_pad_num(next_num)
 
 def generate_pembelian_id(mongo, MONGODB_COLLLECTION_T_PEMBELIAN):
@@ -70,3 +66,5 @@ def generate_produk_id_from_category(mongo, MONGODB_COLLECTION_PRODUCT, category
             prefix = (''.join(letters).upper() + "XXX")[:3]
     next_num = get_next_numeric_suffix_for_prefix(mongo, MONGODB_COLLECTION_PRODUCT, "id", prefix)
     return prefix + _zero_pad_num(next_num)
+
+

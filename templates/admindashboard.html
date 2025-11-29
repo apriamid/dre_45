@@ -4,28 +4,815 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard Admin - Sistem Kasir</title>
-
-  <!-- Webix -->
   <script src="https://cdn.webix.com/edge/webix.js"></script>
   <link rel="stylesheet" href="https://cdn.webix.com/edge/webix.css">
-
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/static/admindashboard.css">
 </head>
 <body>
+
+<script>
+
+// ====================================================================================================
+//            STUB FUNCTION  (Untuk mencegah error jika fungsi ini belum terdefinisi)
+// ====================================================================================================
+function loadLaporanProfit(){
+    console.log("Fungsi loadLaporanProfit dipanggil.");
+    $$("laporan_wrapper").setHTML("<h2>Laporan Belum Diimplementasikan</h2><p>Panggil API untuk data laporan profit.</p>");
+}
+
+function generateKodeClient(kategori){
+    console.log("Fungsi generateKodeClient dipanggil.");
+    const prefix = (kategori || "MISC").substring(0, 3).toUpperCase();
+    return prefix + Date.now().toString().slice(-4);
+}
+
+// =====================================================================================================
+//                                    HELPER FUNCTION FORMAT RUPIAH
+// =====================================================================================================
+function formatRupiah(angka){
+    let numericAngka = parseInt(angka) || 0;
+    return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR', minimumFractionDigits: 0}).format(numericAngka);
+}
+
+// =====================================================================================================
+//                                           FUNGSI LOGOUT
+// =====================================================================================================
+function logout() {
+    localStorage.clear();
+    setTimeout(() => {
+        window.location.href = "/login"; 
+    }, 500); 
+}
+
+
+webix.ready(function() {
+  var userRole = localStorage.getItem("role") || "superadmin";
+  function isReadOnly(entity){
+    if(userRole === "superadmin") return false;
+    if(userRole === "admin"){
+      if(entity === "produk") return false;
+      if(entity === "supplier") return false; 
+      if(entity === "transaksi_pembelian") return false;
+      if(entity === "laporan") return false;
+    }
+    return false;
+  }
+
+  //====================================================================================================
+  //                                          SIDEBAR
+  //====================================================================================================
+  var sidebar = {
+    view:"sidebar",id:"sidebar",width:220,css:"sidebar",collapsed:false,collapsedWidth:60,tooltip:true,select:true,
+    data:[
+      { id:"karyawan", icon:"fa-solid fa-users", value:"Karyawan" },
+      { id:"produk", icon:"fa-solid fa-boxes", value:"Produk" },
+      { id:"supplier", icon:"fa-solid fa-truck-fast", value:"Supplier" }, 
+      { id:"transaksi_pembelian", icon:"fa-solid fa-cart-plus", value:"Pembelian" },
+      { id:"laporan", icon:"fa-solid fa-chart-line", value:"Laporan" },
+      { id:"logout", icon:"fa-solid fa-right-from-bracket", value:"Logout" }
+    ],
+    on:{
+      onAfterSelect:function(id){
+        if(id === "logout"){ 
+            logout(); 
+            return false; 
+        }
+        else { 
+            $$("main").showBatch(id); 
+            if(id === "laporan") loadLaporanProfit(); 
+        }
+      }
+    }
+  };
+
+
+  function createCrudTable(entity, url, columns, allowCrud=true){
+    let extraCols = allowCrud ? [
+      { id:"aksi", header:"Aksi", template:function(obj, common, value){
+      var can_act = true;
+      // RBAC: Admin hanya boleh CRUD KASIR
+      if(entity === "karyawan" && userRole === "admin"){
+          let jab = (obj.jabatan || "").toLowerCase();
+          if(jab !== "kasir"){
+              can_act = false; 
+          }
+      }
+
+
+      if(!can_act){
+          return "<span style='color:#aaa'><i class='fa fa-ban'></i> (Admin)</span>";
+      }
+      return "<span class='editBtn' style='cursor:pointer;margin-right:8px;color:#1E88E5'><i class='fa fa-edit'></i></span>" +
+             "<span class='deleteBtn' style='cursor:pointer;color:#E53935'><i class='fa fa-trash'></i></span>";
+  }, width:100, css:"text-center" }
+
+    ] : [];
+
+
+    if(entity === "transaksi_pembelian" && userRole === "admin"){
+      extraCols = [];
+    }
+    let rows = [
+      {
+        view:"toolbar", css:"webix_dark",
+        cols:[
+          { view:"label", label:entity.toUpperCase(), css:"webix_strong", align:"center" },
+          {},
+          (allowCrud && !isReadOnly(entity)) ? { view:"button", value:"Tambah", css:"webix_primary", width:100, click:function(){
+              $$("form_"+entity).clear();
+              $$("form_"+entity).setValues({});
+              if(entity === "supplier") {
+                $$("form_"+entity).setValues({ id_supplier: "SUP-" + Date.now().toString().slice(-4) });
+              }
+              
+              $$("win_"+entity).show();
+          }} : {}
+        ]
+      },
+
+
+      {
+        view:"datatable",
+        id:"table_"+entity,
+        url:url,
+        select:"row",
+        columns: columns.concat(extraCols),
+        on:{
+        onItemDblClick:function(id){
+        var item = this.getItem(id);
+        if(entity === "karyawan" && userRole === "admin"){
+            let jab = (item.jabatan || "").toLowerCase();
+            if(jab !== "kasir"){
+                webix.message({type:"error", text:"Admin hanya boleh mengedit Kasir"});
+                return;
+            }
+        }
+        $$("form_"+entity).setValues(item);
+        $$("win_"+entity).show();
+      }
+        }
+      }
+    ];
+    return { id:entity, batch:entity, rows:rows };
+  }
+//============================================================================================
+//                                       MAIN LAYOUT
+//============================================================================================
+  webix.ui({
+    rows:[
+      {
+          view:"toolbar",
+          css:"webix_dark",
+          height:60,
+          padding:{ left:15, right:15 },
+          cols:[
+            { view:"icon", icon:"fa-solid fa-bars", tooltip:"Menu", click:function(){
+                var s = $$("sidebar");
+                s.define("collapsed", !s.config.collapsed);
+                s.define("width", s.config.collapsed ? 60 : 220);
+                s.refresh();
+            }},
+            { view:"label", label:"DASHBOARD ADMIN", align:"center",
+              css:{ "font-size":"40px", "font-weight":"600", "color":"white" }
+            },
+            {}
+          ]
+        },
+
+
+      {
+        cols:[
+          sidebar,
+          {
+            view:"multiview",
+            id:"main",
+            keepViews:true,
+            cells:[
+              createCrudTable("karyawan", "/api/karyawan", [
+                { id:"_id", header:"ID", width:100 },
+                { id:"nama", header:"Nama", fillspace:true },
+                { id:"jabatan", header:"Jabatan", width:150 },
+                { id:"gaji", header:"Gaji", width:100, template:function(obj){ return obj.gaji ? new Intl.NumberFormat('id-ID').format(obj.gaji) : 0; } },
+                { id:"status_aktif", header:"Status", width:100, template:function(obj){ return obj.status_aktif ? "Aktif" : "Nonaktif"; } },
+                { id:"tanggal_dibuat", header:"Dibuat", width:160, template:function(obj){ return obj.tanggal_dibuat ? new Date(obj.tanggal_dibuat).toLocaleString() : ""; } }
+              ], !isReadOnly("karyawan")),
+              createCrudTable("produk", "/api/produk", [
+                {id:"id",header:"kode produk",width:120},
+                { id:"nama_produk", header:"Nama Produk", fillspace:true },
+                { id:"kategori", header:"Kategori", width:150 },
+                { id:"stok", header:"Stok", width:80 },
+                { id:"harga_jual", header:"Harga", width:120, template:function(obj){ return obj.harga ? new Intl.NumberFormat('id-ID').format(obj.harga) : 0; } }
+              ], true),
+              createCrudTable("supplier", "/api/supplier", [
+                  { id:"id", header:"ID Supplier", width:120 }, 
+                  { id:"nama", header:"Nama Supplier", fillspace:true },
+                  { id:"kontak", header:"Kontak (Telp)", width:150 },
+                  { id:"alamat", header:"Alamat", width:250 }
+              ], true),
+              { id:"transaksi_pembelian", batch:"transaksi_pembelian", rows:[
+                { view:"toolbar", css:"webix_dark", cols:[
+                  { view:"label", label:"PEMBELIAN", align:"center" },{},
+                  { view:"button", value:"Tambah Pembelian", css:"webix_primary", width:160,
+                    click:()=>{ 
+                      $$("form_pembelian").enable();
+                      $$("table_items").define("editable", true);
+                      $$("table_items").refresh();
+                      $$("form_pembelian").clear(); 
+                      $$("table_items").clearAll(); 
+                      $$("supplier_select").getList().load("/api/supplier"); 
+                      
+                      $$("win_pembelian").show(); 
+                    }}
+                ]},
+
+                { view:"datatable", id:"table_transaksi_pembelian", url:"/api/transaksi_pembelian",
+                  columns:[
+                    { id:"_id", header:"ID", width:120 },
+                    { id:"nama_supplier", header:"Supplier", fillspace:true }, 
+                    { id:"total_pembelian", header:"Total", width:160, template:o=>formatRupiah(o.total_pembelian)},
+                    { id:"tanggal_pembelian", header:"Tanggal", width:180, template:o=>o.tanggal_pembelian?new Date(o.tanggal_pembelian).toLocaleString():""},
+                    { id:"aksi", header:"Aksi", width:70, template:"<span class='editBtn' style='cursor:pointer;color:#1E88E5'><i class='fa fa-eye'></i></span>" }
+                  ],
+                  on:{
+                    onClick:{
+                      "editBtn": function(e,id){
+                        var it = this.getItem(id);
+                        if(it){
+                          $$("detail_supplier").setHTML("Supplier: <b>" + (it.nama_supplier || "-") + "</b>");
+                          $$("detail_items").clearAll();
+                          if (Array.isArray(it.daftar_item)) {
+                              var items = it.daftar_item.map(function(x){
+                                  return {
+                                      nama_produk: x.nama_produk || x.nama || "",
+                                      kategori: x.kategori || x.kategori_produk || "",
+                                      kode_produk: x.kode_produk || x.kode || "",
+                                      jumlah: x.jumlah || x.qty || 0,
+                                      harga_beli: x.harga_beli || x.harga || 0,
+                                      subtotal: x.subtotal || ((x.jumlah||0) * (x.harga_beli||x.harga||0))
+                                  };
+                              });
+                              $$("detail_items").parse(items);
+                          }
+                          $$("detail_total").setHTML("Total: <b>" + webix.i18n.priceFormat(it.total_pembelian || 0) + "</b>");
+                          
+                          $$("win_detail_pembelian").show();
+                        }
+                        return false;
+                      }
+                    }
+                  }
+                }
+              ]},
+                  
+              {
+                id:"laporan",
+                batch:"laporan",
+                view:"scrollview",
+                scroll:"y",
+                body:{
+                    view:"template",
+                    id:"laporan_wrapper",
+                    css:"laporan-wrapper",
+                    template:"<div id='laporan-content'></div>",
+                    autoheight:true
+                }
+              }
+
+            ]
+          }
+        ]
+      }
+    ]
+  });
   
-<!-- MAIN LAYOUT -->
-<script src="/static/js/main.js"></script>
+  //====================================================================================
+  //                       FORM CRUD KARYAWAN PRODUK DAN SUPLIER
+  //====================================================================================
+  const formFields = {
+    karyawan:[
+      { view:"text", name:"_id", hidden:true },
+      { view:"text", name:"nama", label:"Nama" },
+      { view:"richselect", name:"jabatan", label:"Jabatan", options:[ { id:"Admin", value:"Admin" }, { id:"Kasir", value:"Kasir" }, { id:"Superadmin", value:"Superadmin" } ], required:true },
+      { view:"text", name:"gaji", label:"Gaji" },
+      { view:"text", name:"username", label:"Username (Login)" },
+      { view:"text", type:"password", name:"password", label:"Password (Login)" }
+    ],
+    produk:[
+      { view:"text", name:"id", label:"Kode Produk (Auto)", readonly:true, css:{"background-color":"#f0f0f0"} }, 
+      { view:"text", name:"nama_produk", label:"Nama Produk" },
+      { view:"text", name:"kategori", label:"Kategori" },
+      { view:"text", name:"stok", label:"Stok" },
+      { view:"text", name:"harga", label:"Harga" }
+    ],
+    supplier:[
+        { view:"text", name:"_id", hidden:true },
+        { view:"text", name:"nama", label:"Nama Supplier", required:true },
+        { 
+            view:"text", 
+            name:"kontak", 
+            label:"Kontak (Telp)", 
+            required:true,
+            on:{
+                onKeyPress:function(code){
+                    if((code < 48 || code > 57) && code !== 8){
+                        webix.message({ type:"error", text:"Kontak hanya boleh berisi angka!" });
+                        return false;
+                    }
+                }
+            }
+        },
+        { view:"textarea", name:"alamat", label:"Alamat", height:80 }
+    ]
+  };
+  
+  ["karyawan","produk","supplier"].forEach(entity=>{
+    webix.ui({
+      view:"window", id:"win_"+entity, width:600, position:"center", modal:true,
+      head:"Form "+entity.charAt(0).toUpperCase()+entity.slice(1),
+      body:{
+        view:"form", id:"form_"+entity,
+        elements:[
+          ...formFields[entity],
+          { margin:10, cols:[
+            { view:"button", value:"Simpan", css:"webix_primary", click:function(){
+              var form = $$("form_"+entity);
+              var data = form.getValues();
+              for (let k in data) if (typeof data[k] === "string") data[k] = data[k].replace(/<[^>]*>?/gm, '').trim();
 
-<!-- FEATURE MODULES -->
-<script src="/static/js/karyawan.js"></script>
-<script src="/static/js/produk.js"></script>
-<script src="/static/js/pembelian.js"></script>
-<script src="/static/js/shift.js"></script>
-<script src="/static/js/laporan.js"></script>
+              if(data._id){
+                if(entity === "karyawan" && userRole === "admin"){
+                    let jabatanBaru = (data.jabatan || "").toLowerCase();
+                    let row = $$("table_karyawan").getItem(data._id);
+                    let jabatanLama = (row.jabatan || "").toLowerCase();
+                    if(jabatanLama !== "kasir"){
+                        webix.message({type:"error", text:"Admin tidak dapat mengubah data selain Kasir"});
+                        return;
+                    }
+                    if(jabatanBaru !== "kasir"){
+                        webix.message({type:"error", text:"Admin tidak dapat mengubah jabatan Kasir menjadi Admin/Superadmin"});
+                        return;
+                    }
+                }
+                
+                var id = data._id;
+                delete data._id;
+                webix.ajax().headers({"Content-Type":"application/json"})
+                  .put("/api/"+entity+"/"+id, JSON.stringify(data))
+                  .then(function(res){
+                    $$("table_"+entity).clearAll();
+                    $$("table_"+entity).load("/api/"+entity);
+                    $$("win_"+entity).hide();
+                    webix.message("Data berhasil diperbarui!");
+                  }).catch(function(err){
+                    webix.message({ type:"error", text:"Gagal update: "+(err.responseText || err.status) });
+                  });
+              } else {
+                if(entity === "karyawan" && userRole === "admin"){
 
+                    let jabatanBaru = (data.jabatan || "").toLowerCase();
+                    if(jabatanBaru !== "kasir"){
+                        webix.message({type:"error", text:"Admin hanya bisa menambah Kasir."});
+                        return;
+                    }
+                }
+                if(entity === "produk"){
+                  data.id = data.id || generateKodeClient(data.kategori); 
+                }
+              
+                if(entity === "supplier") {
+                    delete data.id_supplier;
+                }
+
+                webix.ajax().headers({"Content-Type":"application/json"})
+                  .post("/api/"+entity, JSON.stringify(data))
+                  .then(function(res){
+                    $$("table_"+entity).clearAll();
+                    $$("table_"+entity).load("/api/"+entity);
+                    $$("win_"+entity).hide();
+                    webix.message("Data berhasil disimpan!");
+                  }).catch(function(err){
+                    webix.message({ type:"error", text:"Gagal simpan: "+(err.responseText || err.status) });
+                  });
+              }
+            }},
+            { view:"button", value:"Batal", width:120, click:function(){ $$("win_"+entity).hide(); }}
+          ]}
+        ]
+      }
+    });
+  });
+
+  function attachRowActions(entity){
+    var table = $$("table_"+entity);
+    if(!table) return;
+
+    table.on_click = table.on_click || {};
+    table.on_click["editBtn"] = function(e, id){
+        var item = this.getItem(id);
+        if(entity === "karyawan" && userRole === "admin"){
+            let jab = (item.jabatan || "").toLowerCase();
+            if(jab !== "kasir"){
+                webix.message({type:"error", text:"Admin hanya boleh mengedit Kasir"});
+                return false;
+            }
+        }
+
+        $$("form_"+entity).setValues(item);
+        $$("win_"+entity).show();
+        return false;
+    };
+    table.on_click["deleteBtn"] = function(e, id){
+      if(isReadOnly(entity) && entity==="karyawan") return;
+      var item = this.getItem(id);
+      
+      if(entity === "karyawan" && userRole === "admin"){
+          let jab = (item.jabatan || "").toLowerCase();
+          if(jab !== "kasir"){
+              webix.message({ type:"error", text:"Admin tidak boleh menghapus Admin atau Superadmin" });
+              return false; 
+          }
+      }
+
+      webix.confirm("Hapus data ini?").then(function(){
+        var deleteId = item._id || item.id; 
+
+        webix.ajax().del("/api/"+entity+"/"+deleteId).then(function(){
+          $$("table_"+entity).remove(id);
+          webix.message("Data dihapus!");
+        }).catch(function(err){
+          var txt="Gagal hapus"; try{ txt=(JSON.parse(err.responseText).message)||err.responseText||txt; }catch(e){}
+          webix.message({ type:"error", text:txt});
+        });
+      });
+      return false; 
+    };
+  }
+  ["karyawan","produk", "supplier"].forEach(function(e){ setTimeout(function(){ attachRowActions(e); }, 300); });
+  webix.ui({
+    view:"window", id:"win_pembelian", width:900, position:"center", modal:true, head:"Form Pembelian",
+    body:{
+      rows:[
+        { view:"form", id:"form_pembelian",
+          elementsConfig:{ labelWidth:150, labelAlign:"left" },
+          elements:[
+           { 
+              view:"richselect", 
+              id:"supplier_select",
+              name:"nama_supplier", 
+              label:"Nama Supplier", 
+              required:true, 
+              width:400,
+              options:{
+                url:"/api/supplier", 
+                template: "#nama#",
+                value: "#nama#", 
+                body:{
+                    template:"#nama#", 
+                    id:"#nama#" 
+                }
+              }
+            },
+            { template:"<hr>", type:"clean", height:10 },
+            { template:"<b>Daftar Item</b>", type:"clean", css:"webix_strong" },
+            { view:"datatable", id:"table_items", editable:true, scroll:"x", select:"row",
+              columns:[
+                { id:"no", header:"No", width:50, template:function(obj, common, value, col, index){ return index+1; }, css:"text-center" },
+                { id:"nama_produk", header:"Nama Produk", editor:"text", fillspace:true, minWidth:200, css:{"text-align":"left"} },
+                { id:"kategori_produk", header:"Kategori", editor:"text", width:140, css:{"text-align":"left"} },
+                { id:"kode_produk", header:"Kode Produk", width:120, css:{"text-align":"center"} },
+                { id:"jumlah", header:"Jumlah", editor:"text", width:100, css:{"text-align":"center"} },
+                { id:"harga_beli", header:"Harga Beli", editor:"text", width:140, css:{"text-align":"right"}, template:o=>formatRupiah(parseInt(o.harga_beli)||0) },
+                { id:"total", header:"total", width:150, css:{"text-align":"right"}, template:o=>formatRupiah((parseInt(o.jumlah)||0)*(parseInt(o.harga_beli)||0)) }
+              ],
+              height:320, data:[], css:"webix_header_border webix_data_border",
+              on:{
+                onAfterEditStop:function(state, editor){
+                  var t=this;
+                  var id = editor.row;
+                  var item = t.getItem(id) || {};
+                  item.jumlah = parseInt(item.jumlah) || 0;
+                  item.harga_beli = parseInt(item.harga_beli) || 0;
+                  item.subtotal = item.jumlah * item.harga_beli;
+                  if(editor.column === "kategori_produk"){
+                    if(/\d/.test(item.kategori_produk || "")){
+                      webix.message({type:"error", text:"Kategori tidak boleh mengandung angka!"});
+                      item.kategori_produk = "";
+                      item.kode_produk = "";
+                      t.updateItem(id, item);
+                      return;
+                    }
+                    if(!item.kode_produk && item.kategori_produk){
+                        item.kode_produk = generateKodeClient(item.kategori_produk);
+                    }
+                  }
+
+                  t.updateItem(id, item);
+                }
+              }
+            },
+            { margin:10, cols:[
+              { view:"button", value:"Tambah Baris", click:function(){ $$("table_items").add({}); } },
+              { view:"button", value:"Hapus Baris", css:"webix_danger", click:function(){
+                var sel = $$("table_items").getSelectedId();
+                if(sel) $$("table_items").remove(sel);
+                else webix.message({type:"error", text:"Pilih baris yang ingin dihapus"});
+              }},
+              {}
+            ]}
+          ]
+        },
+        { margin:10, cols:[
+          { view:"button", value:"Simpan Pembelian", css:"webix_primary", click:function(){
+            var data = $$("form_pembelian").getValues();
+            var rawItems=$$("table_items").serialize();
+            if(!data.nama_supplier || data.nama_supplier.trim()===""){ webix.message({ type:"error", text:"Nama supplier wajib diisi (Pilih dari dropdown)."}); return; }
+            
+            var cleaned=[];
+            for(var i=0;i<rawItems.length;i++){
+              var it=rawItems[i];
+              var nama=(it.nama_produk||"").trim();
+              var kategori=(it.kategori_produk||"").trim();
+              var kode=(it.kode_produk||"").trim();
+              var jumlah=parseInt(it.jumlah)||0;
+              var harga=parseInt(it.harga_beli)||0;
+              if(/\d/.test(kategori)){ webix.message({ type:"error", text:"Kategori item ke-"+(i+1)+" tidak boleh berisi angka."}); return; }
+
+              if(!kode && kategori){ kode = generateKodeClient(kategori); }
+
+              if(!nama || !kategori || jumlah<=0 || harga<=0){
+                webix.message({ type:"error", text:"Item ke-"+(i+1)+" tidak valid. Pastikan Nama, Kategori, Jumlah>0, Harga>0."}); return;
+              }
+              cleaned.push({
+                nama_produk:nama,
+                kategori:kategori,
+                kode_produk: kode,
+                jumlah:jumlah,
+                harga_beli:harga,
+                subtotal:jumlah*harga
+              });
+            }
+            if(cleaned.length===0){ webix.message({ type:"error", text:"Daftar item tidak boleh kosong."}); return; }
+
+            var payload={
+              nama_supplier:data.nama_supplier.trim(), 
+              daftar_item:cleaned,
+              total_pembelian:cleaned.reduce((a,b)=>a+(b.subtotal||0),0),
+              dibuat_oleh: localStorage.getItem("username") || null
+            };
+            webix.ajax().headers({"Content-Type":"application/json"})
+              .post("/api/transaksi_pembelian", JSON.stringify(payload))
+              .then(function(resp){
+                try{ var j = JSON.parse(resp.response); if(j && j.success) webix.message("Pembelian disimpan!"); }catch(e){}
+                $$("table_transaksi_pembelian").clearAll();
+                $$("table_transaksi_pembelian").load("/api/transaksi_pembelian");
+                $$("win_pembelian").hide();
+              })
+              .catch(err=>{
+                var txt="Gagal simpan"; try{ txt=(JSON.parse(err.responseText).message)||err.responseText||txt; }catch(e){}
+                webix.message({type:"error", text:txt});
+              });
+          }},
+          { view:"button", value:"Batal", width:120, click:function(){ $$("win_pembelian").hide(); }}
+        ]}
+      ]
+    }
+  });
+
+
+  
+
+// ====================================================================================================
+//                             LAPORAN TRANSAKSI (CARD + LINE CHART)
+// ====================================================================================================
+function loadLaporanProfit() {
+  const container = document.getElementById("laporan-content");
+  container.innerHTML = `
+    <div style="padding:20px;max-width:1100px;margin:auto;display:block;min-height:1200px;">
+      <h2 style="text-align:center; margin-bottom:30px; font-weight:600; color:#2E7D32;">
+        Laporan Transaksi
+      </h2>
+
+      <div style="
+          display:flex; 
+          flex-wrap:wrap;
+          gap:20px; 
+          justify-content:center; 
+          margin-bottom:30px;
+      ">
+        <div class="laporan-card" style="
+              flex:1; min-width:260px; 
+              background:white; 
+              padding:25px; 
+              border-radius:16px; 
+              box-shadow:0 4px 16px rgba(0,0,0,0.08);
+              text-align:center;">
+          <h3 style="margin:0; color:#555;">Total Penjualan</h3>
+          <div id="total_penjualan" style="
+                font-size:32px; 
+                font-weight:700; 
+                margin-top:10px;">Rp 0</div>
+        </div>
+
+        <div class="laporan-card" style="
+              flex:1; min-width:260px; 
+              background:white; 
+              padding:25px; 
+              border-radius:16px; 
+              box-shadow:0 4px 16px rgba(0,0,0,0.08);
+              text-align:center;">
+          <h3 style="margin:0; color:#555;">Total Pembelian</h3>
+          <div id="total_pembelian" style="
+                font-size:32px; 
+                font-weight:700; 
+                margin-top:10px;">Rp 0</div>
+        </div>
+      </div>
+
+      <div style="
+            background:white;
+            padding:25px;
+            border-radius:16px;
+            box-shadow:0 4px 16px rgba(0,0,0,0.08);
+      ">
+        <h3 style="text-align:center; margin-bottom:10px; color:#444;">
+          Tren Transaksi Harian
+        </h3>
+        <div id="chart_transaksi" style="width:100%; height:420px;"></div>
+      </div>
+
+    </div>
+  `;
+
+  Promise.all([
+    fetch("/api/laporan/total_penjualan").then(r => r.json()),
+    fetch("/api/laporan/total_pembelian").then(r => r.json()),
+    fetch("/api/laporan/tren_transaksi").then(r => r.json()),
+  ])
+  .then(([penjualanRes, pembelianRes, trenRes]) => {
+    if (penjualanRes.success) {
+      document.getElementById("total_penjualan").innerHTML = 
+        webix.i18n.priceFormat(penjualanRes.total);
+    }
+    if (pembelianRes.success) {
+      document.getElementById("total_pembelian").innerHTML = 
+        webix.i18n.priceFormat(pembelianRes.total);
+    }
+    if (trenRes.success && Array.isArray(trenRes.data)) {
+
+      if ($$("chart_transaksi_view"))
+        $$("chart_transaksi_view").destructor();
+
+      webix.ui({
+        container: "chart_transaksi",
+        id: "chart_transaksi_view",
+        view: "chart",
+        type: "line",
+        tooltip: { 
+          template: obj => 
+            `Tanggal: ${obj.tanggal}<br>
+             Penjualan: ${webix.i18n.priceFormat(obj.penjualan)}<br>
+             Pembelian: ${webix.i18n.priceFormat(obj.pembelian)}`
+        },
+        xAxis: {
+          template:"#tanggal#",
+          lines: false,
+          title: "Tanggal",
+          lineColor:"#ccc",
+          css: {
+            transform: "rotate(45deg)",
+            transformOrigin: "left"
+          }
+        },
+        yAxis: {
+          title: "Nominal (Rp)",
+          lines: true,
+          lineColor:"#ddd"
+        },
+        padding:{
+          left:60,
+          right:30,
+          top:50,
+          bottom:60
+        },
+        legend:{
+          values:[
+            {text:"Penjualan",color:"#43A047"},
+            {text:"Pembelian",color:"#1E88E5"},
+          ],
+          valign:"top",
+          align:"center",
+          layout:"x"
+        },
+        series:[
+          {
+            value:"#penjualan#",
+            item:{ radius:3 },
+            line:{ color:"#43A047", width:3 }
+          },
+          {
+            value:"#pembelian#",
+            item:{ radius:3 },
+            line:{ color:"#1E88E5", width:3 }
+          }
+        ],
+        data: trenRes.data
+      });
+
+    } else {
+      document.getElementById("chart_transaksi").innerHTML =
+        "<p style='text-align:center; color:#bbb;'>Tidak ada data grafik</p>";
+    }
+
+  })
+  .catch(err => {
+    console.error(err);
+    container.innerHTML = "<p style='text-align:center;color:red;'>Gagal memuat laporan.</p>";
+  });
+}
+webix.i18n.setLocale();
+webix.i18n.priceFormat = function(value){
+    return "Rp " + webix.Number.format(value, {
+        groupDelimiter: ".",
+        groupSize: 3,
+        decimalSize: 0
+    });
+};
+webix.ui({
+    view:"window",
+    id:"win_detail_pembelian",
+    width:700,
+    height:480,
+    position:"center",
+    modal:true,
+    head:"Detail Transaksi Pembelian",
+    body:{
+        rows:[
+            { template:"Detail Supplier", type:"header" },
+            { id:"detail_supplier", template:"Supplier: -", height:40, css:"webix_el_box" },
+
+            { template:"Daftar Produk", type:"header" },
+
+            {
+                view:"datatable",
+                id:"detail_items",
+                autoheight:true,
+                columns:[
+                    { id:"nama_produk", header:"Nama Produk", fillspace:true },
+                    { id:"kategori", header:"Kategori", width:120 },
+                    { id:"kode_produk", header:"Kode", width:120 },
+                    { id:"jumlah", header:"Jumlah", width:90, css:"text-center" },
+                    { id:"harga_beli", header:"Harga", width:120, format:webix.i18n.priceFormat },
+                    { id:"subtotal", header:"Subtotal", width:140, format:webix.i18n.priceFormat }
+                ]
+            },
+
+            { id:"detail_total", template:"Total: -", height:45, css:"webix_el_box" },
+
+            { cols:[
+                {},
+                { view:"button", value:"Tutup", width:120, click:function(){
+                    $$("win_detail_pembelian").hide();
+                }}
+            ]}
+        ]
+    }
+});
+
+
+  $$("main").showBatch("karyawan");
+  
+  setTimeout(() => {
+      const tbl = $$("table_transaksi_pembelian");
+      if (!tbl) return;
+
+      tbl.on_click = tbl.on_click || {};
+      tbl.on_click["editBtn"] = function(e, id) {
+          const tr = this.getItem(id);
+          if (!tr) return false;
+          $$("detail_supplier").setHTML("Supplier: <b>" + (tr.nama_supplier || "-") + "</b>");
+          $$("detail_items").clearAll();
+          if (Array.isArray(tr.daftar_item)) {
+              var items = tr.daftar_item.map(function(x){
+                  return {
+                      nama_produk: x.nama_produk || x.nama || "",
+                      kategori: x.kategori || x.kategori_produk || "",
+                      kode_produk: x.kode_produk || x.kode || "",
+                      jumlah: x.jumlah || x.qty || 0,
+                      harga_beli: x.harga_beli || x.harga || 0,
+                      subtotal: x.subtotal || ((x.jumlah||0) * (x.harga_beli||x.harga||0))
+                  };
+              });
+              $$("detail_items").parse(items);
+          }
+          $$("detail_total").setHTML("Total: <b>" + webix.i18n.priceFormat(tr.total_pembelian || 0) + "</b>");
+
+          $$("win_detail_pembelian").show();
+          return false;
+      };
+  }, 600);
+
+});
+</script>
 </body>
 </html>

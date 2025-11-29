@@ -2,88 +2,95 @@ import jwt
 from common.mongo_connection import MongoConnection
 from config import MONGODB_CONNECTION_STRING, MONGODB_AUTH_DATABASE, MONGODB_SESSION_COLLECTION
 from datetime import datetime, timedelta
-
+from pymongo import ReturnDocument
 
 class SessionManager:
     """Kelas untuk mengelola sesi pengguna menggunakan JWT dan MongoDB."""
 
     def __init__(self):
-        """Inisialisasi koneksi MongoDB dan secret key untuk JWT."""
-        self.auth_mongo = MongoConnection(
-            connection_string=MONGODB_CONNECTION_STRING,
-            db_name=MONGODB_AUTH_DATABASE
-        )
+        self.auth_mongo = MongoConnection(connection_string=MONGODB_CONNECTION_STRING, db_name=MONGODB_AUTH_DATABASE)
         self.secret_key = 'kapita_secret_key'
+        self.coll = self.auth_mongo.db[MONGODB_SESSION_COLLECTION]
 
     def generate_token(self, username, role):
-        """Membuat token JWT dan menyimpannya ke dalam koleksi sesi MongoDB.
-
-        Args:
-            username (str): Nama pengguna yang login.
-            role (str): Peran pengguna, misalnya 'admin' atau 'kasir'.
-
-        Returns:
-            str: Token JWT yang telah dibuat dan disimpan ke database.
+        """
+        Membuat token JWT dan menyimpannya ke dalam koleksi sesi MongoDB.
+        Jika sudah ada session aktif untuk username dan belum expired, kembalikan token yang ada.
         """
         now = datetime.utcnow()
+        existing = self.coll.find_one({"username": username})
+        if existing:
+            existing_token = existing.get("token")
+            try:
+                payload = jwt.decode(existing_token, self.secret_key, algorithms=['HS256'])
+                return existing_token
+            except jwt.ExpiredSignatureError:
+                self.coll.delete_one({"_id": existing["_id"]})
+            except jwt.InvalidTokenError:
+                self.coll.delete_one({"_id": existing["_id"]})
+            except Exception:
+                self.coll.delete_one({"_id": existing["_id"]})
+
+        exp = now + timedelta(hours=24)
         payload = {
-            'username': username,
-            'role': role,
-            'exp': now + timedelta(hours=24),
-            'iat': now
+            "username": username,
+            "role": role,
+            "iat": now,
+            "exp": exp
         }
-        token = jwt.encode(payload, self.secret_key, algorithm='HS256')
+        token = jwt.encode(payload, self.secret_key, algorithm="HS256")
+        if isinstance(token, bytes):
+            token = token.decode("utf-8")
 
-        session_data = {
-            'username': username,
-            'role': role,
-            'token': token,
-            'created_at': now,
-            'expires_at': payload['exp']
+        session_doc = {
+            "username": username,
+            "role": role,
+            "token": token,
+            "created_at": now,
+            "expires_at": exp,
+            "user_agent": None,
+            "ip": None
         }
-        self.auth_mongo.insert(MONGODB_SESSION_COLLECTION, session_data)
-
+        self.coll.insert_one(session_doc)
         return token
 
     def verify_token(self, token):
-        """Memverifikasi token JWT apakah valid atau telah kadaluarsa.
-        Args:
-            token (str): Token JWT yang akan diverifikasi.
-        Returns:
-            dict | None: Payload token jika valid, None jika token tidak valid atau kadaluarsa.
+        """
+        Dual-layer verification:
+        1) Session Guard: token harus ada di collection user_sessions
+        2) JWT Integrity & Expiration: jwt.decode() harus sukses
         """
         try:
-            session = self.auth_mongo.find(MONGODB_SESSION_COLLECTION, {'token': token})
-
-            # Pastikan session masih ada di database
-            if not session:
+            session_doc = self.coll.find_one({"token": token})
+            if not session_doc:
                 return None
-
-            # Decode token dan kembalikan payload
             payload = jwt.decode(token, self.secret_key, algorithms=['HS256'])
             return payload
 
         except jwt.ExpiredSignatureError:
-            # Token kadaluarsa, hapus session dari database
-            self.auth_mongo.delete(MONGODB_SESSION_COLLECTION, {'token': token})
-            print(f"Token expired: {token}")
+            try:
+                self.coll.delete_one({"token": token})
+            except Exception:
+                pass
             return None
+
         except jwt.InvalidTokenError:
-            # Token tidak valid
-            print(f"Invalid token: {token}")
+            try:
+                self.coll.delete_one({"token": token})
+            except Exception:
+                pass
             return None
+
         except Exception as e:
-            print(f"Error verifying token: {e}")
+            try:
+                self.coll.delete_one({"token": token})
+            except Exception:
+                pass
             return None
 
     def remove_token(self, token):
-        """Menghapus token dari database untuk mengakhiri sesi pengguna.
-
-        Args:
-            token (str): Token JWT yang akan dihapus.
-        """
-        self.auth_mongo.delete(MONGODB_SESSION_COLLECTION, {"token": token})
-
-
-if __name__ == "__main__":
-    pass
+        """Menghapus token dari database untuk mengakhiri sesi pengguna."""
+        try:
+            self.coll.delete_one({"token": token})
+        except Exception:
+            pass

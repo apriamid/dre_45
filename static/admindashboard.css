@@ -1,0 +1,113 @@
+body {
+    background: linear-gradient(to bottom right, #e9f5ef, #ffffff);
+    font-family: "Inter", sans-serif;
+}
+
+.sidebar {
+    background: #1b5e20 !important;
+    border-right: 2px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(6px);
+}
+
+.webix_sidebar .webix_tree_item {
+    font-size: 15px !important;
+    padding: 14px !important;
+    color: #ffffff !important; /* Diubah menjadi putih murni */
+    font-weight: 500;
+}
+.webix_sidebar .webix_tree_item:hover {
+    background-color: #1b5e20 !important; /* Diatur sama dengan warna sidebar */
+    color: #ffffff !important; /* Pastikan teks tetap putih */
+}
+.webix_sidebar .webix_tree_item.webix_selected {
+    background-color: #1b5e20 !important; /* Diatur sama dengan warna sidebar */
+    color: #ffffff !important; /* Pastikan teks tetap putih */
+}
+
+.webix_sidebar .webix_selected {
+    background: rgba(253, 253, 253, 0.15) !important;
+    border-left: 4px solid #fff !important;
+}
+
+.webix_toolbar.webix_dark {
+    background: #1d6921 !important;
+    border-bottom: 3px solid rgba(76, 60, 60, 0.2);
+}
+
+.webix_dtable .webix_column {
+    font-size: 14px;
+}
+
+.webix_dtable .webix_row_select {
+    background: rgba(76,175,80,0.2) !important;
+}
+
+.webix_dtable .webix_cell {
+    border-color: #e0e0e0 !important;
+}
+
+.webix_primary {
+    border-radius: 8px !important;
+    color: white !important;
+    font-weight: 600 !important;
+}
+
+.webix_secondary {
+    border-radius: 8px !important;
+    color: white !important;
+    font-weight: 500 !important;
+}
+
+.webix_danger {
+    border-radius: 8px !important;
+    color: white !important;
+    font-weight: 500;
+}
+
+.webix_window {
+    border-radius: 18px !important;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+.webix_win_head { 
+    color: rgb(255, 255, 255) !important;
+    font-weight: bold !important;
+}
+
+.laporan-card {
+    transition: 0.3s;
+}
+
+.laporan-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.15) !important;
+}
+
+#chart_transaksi {
+    border-radius: 12px;
+}
+
+.webix_scrollview .webix_scrollview_content {
+    display:block !important;
+}
+
+
+/* Menghilangkan border dan shadow pada input field Webix */
+.webix_el_text input,
+.webix_el_select select,
+.webix_el_textarea textarea {
+    border: none !important; /* Menghilangkan garis batas utama */
+    box-shadow: none !important; /* Menghilangkan bayangan atau efek glow */
+    border-bottom: 1px solid #ddd !important; /* Opsi: Menambahkan garis bawah tipis */
+    padding: 10px 0 !important; /* Sesuaikan padding agar terlihat bersih */
+}
+
+/* Penting: Hilangkan border pada saat field dalam keadaan fokus (di klik) */
+.webix_el_text.webix_focused input,
+.webix_el_select.webix_focused select,
+.webix_el_textarea.webix_focused textarea {
+    border: none !important;
+    box-shadow: none !important;
+    border-bottom: 2px solid var(--brand, #0b615b) !important; /* Opsi: Garis bawah tebal saat fokus */
+}

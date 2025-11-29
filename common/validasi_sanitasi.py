@@ -2,9 +2,9 @@ import re
 from bson import ObjectId
 from datetime import datetime
 
-# ======================================================
-#  SANITASI INPUT
-# ======================================================
+# ========================================================================
+#                           SANITASI INPUT
+# ========================================================================
 
 def sanitize_input(value):
     """Hilangkan tag HTML dan spasi berlebih"""
@@ -20,10 +20,10 @@ def sanitize_dict(data):
         return {}
     return {k: sanitize_input(v) for k, v in data.items() if v is not None}
 
+# ========================================================================
+#                          VALIDASI DASAR
+# ========================================================================
 
-# ======================================================
-# VALIDASI DASAR
-# ======================================================
 RE_NAME = re.compile(r'^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$')
 RE_PHONE = re.compile(r'^[0-9]+$')
 RE_EMAIL_GMAIL = re.compile(r'^[\w\.-]+@gmail\.com$', re.IGNORECASE)
@@ -79,9 +79,9 @@ def parse_id_query(id_str):
         return {"id": id_str}
 
 
-# ======================================================
-# NORMALISASI OUTPUT
-# ======================================================
+# ========================================================================
+#                          NORMALISASI OUTPUT
+# ========================================================================
 
 def normalize_for_client(doc):
     """Ubah ObjectId ke string agar bisa dibaca di frontend"""
@@ -94,11 +94,9 @@ def normalize_for_client(doc):
         if "id" not in new:
             new["id"] = str(_id)
     return new
-
-
-# ======================================================
-# VALIDASI ENTITY SPESIFIK
-# ======================================================
+# ========================================================================
+#                          VALIDASI SPESIFIK
+# ========================================================================
 
 def validate_karyawan_input(data):
     try:
