@@ -414,8 +414,8 @@ webix.ready(function() {
       return false; 
     };
   }
-  // ["karyawan","produk", "supplier"].forEach(function(e){ setTimeout(function(){ attachRowActions(e); }, 300); }); // Baris Asli
-  ["karyawan","produk"].forEach(function(e){ setTimeout(function(){ attachRowActions(e); }, 300); }); // Supplier Dihapus
+  
+  ["karyawan","produk"].forEach(function(e){ setTimeout(function(){ attachRowActions(e); }, 300); });
   webix.ui({
     view:"window", id:"win_pembelian", width:900, position:"center", modal:true, head:"Form Pembelian",
     body:{
@@ -470,8 +470,8 @@ webix.ready(function() {
               }
             },
             { margin:10, cols:[
-              { view:"button", value:"Tambah Baris", click:function(){ $$("table_items").add({}); } },
-              { view:"button", value:"Hapus Baris", css:"webix_danger", click:function(){
+              { view:"button", value:"Tambah", click:function(){ $$("table_items").add({}); } },
+              { view:"button", value:"Hapus", css:"webix_danger", click:function(){
                 var sel = $$("table_items").getSelectedId();
                 if(sel) $$("table_items").remove(sel);
                 else webix.message({type:"error", text:"Pilih baris yang ingin dihapus"});
@@ -481,7 +481,7 @@ webix.ready(function() {
           ]
         },
         { margin:10, cols:[
-          { view:"button", value:"Simpan Pembelian", css:"webix_primary", click:function(){
+          { view:"button", value:"Simpan", css:"webix_primary", click:function(){
             var data = $$("form_pembelian").getValues();
             var rawItems=$$("table_items").serialize();
             if(!data.nama_supplier || data.nama_supplier.trim()===""){ webix.message({ type:"error", text:"Nama supplier wajib diisi."}); return; }
