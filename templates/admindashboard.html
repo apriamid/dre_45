@@ -36,40 +36,8 @@ function formatRupiah(angka){
 }
 
 
-if (window.location.protocol === "https:") {
-    
-    const forceHttpsUrl = function(url) {
-        if (url && typeof url === 'string' && url.startsWith("/api/")) {
-            return "https://" + window.location.host + url;
-        }
-        return url;
-    };
 
-    // 1. Memaksa HTTPS untuk Webix Data Loading 
-    webix.proxy.local.url = function(view, config) {
-        config.url = forceHttpsUrl(config.url);
-        return webix.proxy.base.url.apply(this, arguments);
-    };
 
-    // 2. Memaksa HTTPS untuk Webix AJAX PUT/POST/DELETE 
-    webix.extend(webix.ajax, {
-        master: function(url, data, callback, method) {
-            url = forceHttpsUrl(url);
-            // Panggil fungsi master AJAX Webix asli
-            return this.master(url, data, callback, method); 
-        }
-    }, true);
-    
-    // 3. Memaksa HTTPS untuk Fetch API 
-    window.originalFetch = window.fetch;
-    window.fetch = function(input, init) {
-        let url = input;
-        if (typeof input === 'string') {
-            url = forceHttpsUrl(input);
-        }
-        return window.originalFetch(url, init);
-    };
-}
 
 // =====================================================================================================
 //                                           FUNGSI LOGOUT
@@ -240,7 +208,7 @@ webix.ready(function() {
                 { id:"stok", header:"Stok", width:80 },
                 { id:"harga_jual", header:"Harga", width:120, template:function(obj){ return obj.harga ? new Intl.NumberFormat('id-ID').format(obj.harga) : 0; } }
               ], true),
-              createCrudTable("supplier", "/api/supplier", [
+              createCrudTable("supplier", "//projekfinal-672023169-975615093796.asia-southeast2.run.app/api/supplier", [
                   { id:"id", header:"ID Supplier", width:120 }, 
                   { id:"nama", header:"Nama Supplier", fillspace:true },
                   { id:"kontak", header:"Kontak (Telp)", width:150 },
@@ -499,7 +467,7 @@ webix.ready(function() {
               required:true, 
               width:400,
               options:{
-                url:"/api/supplier", 
+                url:"//projekfinal-672023169-975615093796.asia-southeast2.run.app/api/supplier",
                 template: "#nama#",
                 value: "#nama#", 
                 body:{
