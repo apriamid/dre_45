@@ -27,8 +27,7 @@ def _serialize_doc(doc):
     for k, v in list(out.items()):
         if isinstance(v, datetime):
             out[k] = v.isoformat()
-    if "id_supplier" in out:
-        del out["id_supplier"]
+
         
     return out
 
