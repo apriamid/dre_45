@@ -176,7 +176,6 @@ def add_pembelian():
         items = []
         used_local_counters = {}
 
-        # VALIDASI & PERSIAPAN ITEM
         for idx, it in enumerate(daftar_item):
             nama = (it.get("nama_produk") or "").strip()
             kategori = (it.get("kategori") or "").strip()
