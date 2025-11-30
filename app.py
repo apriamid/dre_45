@@ -15,8 +15,9 @@ app = Flask(__name__, template_folder="templates")
 app.secret_key = "kapita_secret_key"
 
 session_manager = SessionManager()
-managelogin = Loginaja()
+
 mongo = MongoConnection(connection_string=MONGODB_CONNECTION_STRING, db_name=MONGODB_DATABASE_NAME)
+managelogin = Loginaja(mongo=mongo) 
 
 app.register_blueprint(karyawan_bp, url_prefix="/api/karyawan")
 app.register_blueprint(produk_bp, url_prefix="/api/produk")
@@ -36,7 +37,7 @@ def before_request_func():
     path = request.path
 
     PUBLIC_ROUTES = {"/login", "/", "/favicon.ico"}
-  
+ 
     if path.startswith("/static/"):
         return None
     if path in PUBLIC_ROUTES:
