@@ -105,12 +105,30 @@ def logout():
 
 @app.route("/admin-dashboard")
 def admin_dashboard():
-    return render_template("admindashboard.html")
+    if not hasattr(g, 'user') or not g.user:
+        return redirect(url_for("login"))
+    user_role = g.user.get('role')
+
+    if user_role == 'kasir':
+        return redirect(url_for("kasir_dashboard"))
+        
+    if user_role in ('admin', 'superadmin'):
+        return render_template("admindashboard.html")
+    return redirect(url_for("login"))
 
 
 @app.route("/kasir-dashboard")
 def kasir_dashboard():
-    return render_template("sistemkasir.html")
+    if not hasattr(g, 'user') or not g.user:
+        return redirect(url_for("login"))
+    user_role = g.user.get('role')
+    
+    if user_role in ('admin', 'superadmin'):
+        return redirect(url_for("admin_dashboard"))
+        
+    if user_role == 'kasir':
+        return render_template("sistemkasir.html")
+    return redirect(url_for("login"))
 
 
 @app.route("/api/me")
@@ -140,4 +158,4 @@ def api_userinfo():
 
 
 if __name__ == '__main__':
-    app.run(debug=True,host="0.0.0.0")
+    app.run(debug=True)

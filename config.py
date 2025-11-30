@@ -1,6 +1,6 @@
 MONGODB_CONNECTION_STRING = "mongodb+srv://672023169:672023169@kapita-selekta.oyq1aph.mongodb.net/?retryWrites=true&w=majority"
 
-#db produks
+# Database Name
 MONGODB_DATABASE_NAME = "Tugas_akhir"
 
 # COLLECTION

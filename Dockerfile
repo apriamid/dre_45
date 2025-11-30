@@ -30,4 +30,3 @@ ENV CLOUD_APPS CLOUD_RUN
 WORKDIR /pythonproject
 COPY . ./
 CMD . /opt/venv/bin/activate && exec gunicorn --worker-class eventlet --bind 0.0.0.0:8080 --workers 1 -t 4 app:app
-
