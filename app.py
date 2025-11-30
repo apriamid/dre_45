@@ -17,17 +17,39 @@ from blueprint.supplier_bp import supplier_bp
 app = Flask(__name__, template_folder="templates")
 app.secret_key = "kapita_secret_key"
 
-# =========================================================================
-# --- Perbaikan #1: Terapkan ProxyFix ---
-# Gunakan x_proto=1, atau coba 2 jika masih gagal. Ini menginstruksikan Flask 
-# untuk membaca header X-Forwarded-Proto dari Cloud Run.
-# =========================================================================
 app.wsgi_app = ProxyFix(
     app.wsgi_app, 
     x_for=1,    
     x_host=1,   
-    x_proto=2   
+    x_proto=1   
 )
+
+# =========================================================================
+# SOLUSI SERVER TERAKHIR: PAKSA SCHEME HTTPS PADA SEMUA URL GENERASI FLASK
+# =========================================================================
+# Ini memastikan bahwa jika Flask pernah menghasilkan URL absolut (misalnya untuk API) 
+# karena Webix memicu *redirect* atau *request* aneh, protokolnya selalu HTTPS.
+@app.url_defaults
+def set_secure_url_defaults(endpoint, values):
+    if 'static' in endpoint:
+        # Abaikan aset statis
+        return
+
+    # Jika _scheme belum ditentukan dan request.url_root adalah HTTPS,
+    # atau jika request_root masih HTTP, paksa HTTPS.
+    # Namun, karena ProxyFix gagal, kita akan memaksanya:
+    if '_scheme' not in values:
+        values['_scheme'] = 'https'
+    if '_external' not in values:
+        values['_external'] = True # Penting untuk memaksa skema
+
+
+@app.url_value_preprocessor
+def pull_url_defaults(endpoint, values):
+    # Mengembalikan url_for ke fungsionalitas normal untuk internal link
+    if values is not None:
+        values.pop('_scheme', None)
+        values.pop('_external', None)
 # =========================================================================
 
 session_manager = SessionManager()

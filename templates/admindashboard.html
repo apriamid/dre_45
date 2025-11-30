@@ -37,8 +37,6 @@ function formatRupiah(angka){
 
 
 
-
-
 // =====================================================================================================
 //                                           FUNGSI LOGOUT
 // =====================================================================================================
@@ -208,7 +206,7 @@ webix.ready(function() {
                 { id:"stok", header:"Stok", width:80 },
                 { id:"harga_jual", header:"Harga", width:120, template:function(obj){ return obj.harga ? new Intl.NumberFormat('id-ID').format(obj.harga) : 0; } }
               ], true),
-              createCrudTable("supplier", "//projekfinal-672023169-975615093796.asia-southeast2.run.app/api/supplier", [
+              createCrudTable("supplier", "/api/supplier", [
                   { id:"id", header:"ID Supplier", width:120 }, 
                   { id:"nama", header:"Nama Supplier", fillspace:true },
                   { id:"kontak", header:"Kontak (Telp)", width:150 },
@@ -467,7 +465,7 @@ webix.ready(function() {
               required:true, 
               width:400,
               options:{
-                url:"//projekfinal-672023169-975615093796.asia-southeast2.run.app/api/supplier",
+                url:"/api/supplier", 
                 template: "#nama#",
                 value: "#nama#", 
                 body:{
