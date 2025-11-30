@@ -52,7 +52,7 @@ webix.ready(function() {
     if(userRole === "superadmin") return false;
     if(userRole === "admin"){
       if(entity === "produk") return false;
-      if(entity === "supplier") return false; 
+      // if(entity === "supplier") return false; // Dihapus
       if(entity === "transaksi_pembelian") return false;
       if(entity === "laporan") return false;
     }
@@ -67,7 +67,7 @@ webix.ready(function() {
     data:[
       { id:"karyawan", icon:"fa-solid fa-users", value:"Karyawan" },
       { id:"produk", icon:"fa-solid fa-boxes", value:"Produk" },
-      { id:"supplier", icon:"fa-solid fa-truck-fast", value:"Supplier" }, 
+      // { id:"supplier", icon:"fa-solid fa-truck-fast", value:"Supplier" }, // Dihapus
       { id:"transaksi_pembelian", icon:"fa-solid fa-cart-plus", value:"Pembelian" },
       { id:"laporan", icon:"fa-solid fa-chart-line", value:"Laporan" },
       { id:"logout", icon:"fa-solid fa-right-from-bracket", value:"Logout" }
@@ -122,9 +122,9 @@ webix.ready(function() {
           (allowCrud && !isReadOnly(entity)) ? { view:"button", value:"Tambah", css:"webix_primary", width:100, click:function(){
               $$("form_"+entity).clear();
               $$("form_"+entity).setValues({});
-              if(entity === "supplier") {
-                $$("form_"+entity).setValues({ id_supplier: "SUP-" + Date.now().toString().slice(-4) });
-              }
+              // if(entity === "supplier") { // Dihapus
+              //   $$("form_"+entity).setValues({ id_supplier: "SUP-" + Date.now().toString().slice(-4) }); // Dihapus
+              // } // Dihapus
               
               $$("win_"+entity).show();
           }} : {}
@@ -204,12 +204,12 @@ webix.ready(function() {
                 { id:"stok", header:"Stok", width:80 },
                 { id:"harga_jual", header:"Harga", width:120, template:function(obj){ return obj.harga ? new Intl.NumberFormat('id-ID').format(obj.harga) : 0; } }
               ], true),
-              createCrudTable("supplier", "/api/supplier", [
-                  { id:"id", header:"ID Supplier", width:120 }, 
-                  { id:"nama", header:"Nama Supplier", fillspace:true },
-                  { id:"kontak", header:"Kontak (Telp)", width:150 },
-                  { id:"alamat", header:"Alamat", width:250 }
-              ], true),
+              // createCrudTable("supplier", "/api/supplier", [ // Dihapus
+              //     { id:"id", header:"ID Supplier", width:120 }, // Dihapus
+              //     { id:"nama", header:"Nama Supplier", fillspace:true }, // Dihapus
+              //     { id:"kontak", header:"Kontak (Telp)", width:150 }, // Dihapus
+              //     { id:"alamat", header:"Alamat", width:250 } // Dihapus
+              // ], true), // Dihapus
               { id:"transaksi_pembelian", batch:"transaksi_pembelian", rows:[
                 { view:"toolbar", css:"webix_dark", cols:[
                   { view:"label", label:"PEMBELIAN", align:"center" },{},
@@ -220,7 +220,7 @@ webix.ready(function() {
                       $$("table_items").refresh();
                       $$("form_pembelian").clear(); 
                       $$("table_items").clearAll(); 
-                      $$("supplier_select").getList().load("/api/supplier"); 
+                      // $$("supplier_select").getList().load("/api/supplier"); // Dihapus
                       
                       $$("win_pembelian").show(); 
                     }}
@@ -229,7 +229,7 @@ webix.ready(function() {
                 { view:"datatable", id:"table_transaksi_pembelian", url:"/api/transaksi_pembelian",
                   columns:[
                     { id:"_id", header:"ID", width:120 },
-                    { id:"nama_supplier", header:"Supplier", fillspace:true }, 
+                    // { id:"nama_supplier", header:"Supplier", fillspace:true }, // Dihapus
                     { id:"total_pembelian", header:"Total", width:160, template:o=>formatRupiah(o.total_pembelian)},
                     { id:"tanggal_pembelian", header:"Tanggal", width:180, template:o=>o.tanggal_pembelian?new Date(o.tanggal_pembelian).toLocaleString():""},
                     { id:"aksi", header:"Aksi", width:70, template:"<span class='editBtn' style='cursor:pointer;color:#1E88E5'><i class='fa fa-eye'></i></span>" }
@@ -239,7 +239,7 @@ webix.ready(function() {
                       "editBtn": function(e,id){
                         var it = this.getItem(id);
                         if(it){
-                          $$("detail_supplier").setHTML("Supplier: <b>" + (it.nama_supplier || "-") + "</b>");
+                          $$("detail_supplier").setHTML("Transaksi: <b>" + (it._id || "-") + "</b>"); // Diubah untuk menampilkan ID Transaksi
                           $$("detail_items").clearAll();
                           if (Array.isArray(it.daftar_item)) {
                               var items = it.daftar_item.map(function(x){
@@ -305,28 +305,29 @@ webix.ready(function() {
       { view:"text", name:"stok", label:"Stok" },
       { view:"text", name:"harga", label:"Harga" }
     ],
-    supplier:[
-        { view:"text", name:"_id", hidden:true },
-        { view:"text", name:"nama", label:"Nama Supplier", required:true },
-        { 
-            view:"text", 
-            name:"kontak", 
-            label:"Kontak (Telp)", 
-            required:true,
-            on:{
-                onKeyPress:function(code){
-                    if((code < 48 || code > 57) && code !== 8){
-                        webix.message({ type:"error", text:"Kontak hanya boleh berisi angka!" });
-                        return false;
-                    }
-                }
-            }
-        },
-        { view:"textarea", name:"alamat", label:"Alamat", height:80 }
-    ]
+    // supplier:[ // Dihapus
+    //     { view:"text", name:"_id", hidden:true }, // Dihapus
+    //     { view:"text", name:"nama", label:"Nama Supplier", required:true }, // Dihapus
+    //     { // Dihapus
+    //         view:"text", // Dihapus
+    //         name:"kontak", // Dihapus
+    //         label:"Kontak (Telp)", // Dihapus
+    //         required:true, // Dihapus
+    //         on:{ // Dihapus
+    //             onKeyPress:function(code){ // Dihapus
+    //                 if((code < 48 || code > 57) && code !== 8){ // Dihapus
+    //                     webix.message({ type:"error", text:"Kontak hanya boleh berisi angka!" }); // Dihapus
+    //                     return false; // Dihapus
+    //                 } // Dihapus
+    //             } // Dihapus
+    //         } // Dihapus
+    //     }, // Dihapus
+    //     { view:"textarea", name:"alamat", label:"Alamat", height:80 } // Dihapus
+    // ] // Dihapus
   };
   
-  ["karyawan","produk","supplier"].forEach(entity=>{
+  // ["karyawan","produk","supplier"].forEach(entity=>{ // Baris Asli
+  ["karyawan","produk"].forEach(entity=>{ // Supplier Dihapus
     webix.ui({
       view:"window", id:"win_"+entity, width:600, position:"center", modal:true,
       head:"Form "+entity.charAt(0).toUpperCase()+entity.slice(1),
@@ -380,9 +381,9 @@ webix.ready(function() {
                   data.id = data.id || generateKodeClient(data.kategori); 
                 }
               
-                if(entity === "supplier") {
-                    delete data.id_supplier;
-                }
+                // if(entity === "supplier") { // Dihapus
+                //     delete data.id_supplier; // Dihapus
+                // } // Dihapus
 
                 webix.ajax().headers({"Content-Type":"application/json"})
                   .post("/api/"+entity, JSON.stringify(data))
@@ -448,7 +449,8 @@ webix.ready(function() {
       return false; 
     };
   }
-  ["karyawan","produk", "supplier"].forEach(function(e){ setTimeout(function(){ attachRowActions(e); }, 300); });
+  // ["karyawan","produk", "supplier"].forEach(function(e){ setTimeout(function(){ attachRowActions(e); }, 300); }); // Baris Asli
+  ["karyawan","produk"].forEach(function(e){ setTimeout(function(){ attachRowActions(e); }, 300); }); // Supplier Dihapus
   webix.ui({
     view:"window", id:"win_pembelian", width:900, position:"center", modal:true, head:"Form Pembelian",
     body:{
@@ -457,21 +459,22 @@ webix.ready(function() {
           elementsConfig:{ labelWidth:150, labelAlign:"left" },
           elements:[
            { 
-              view:"richselect", 
-              id:"supplier_select",
+              // Menghapus elemen richselect untuk supplier, ganti dengan text biasa
+              view:"text", 
+              id:"supplier_text", // Ubah ID
               name:"nama_supplier", 
-              label:"Nama Supplier", 
+              label:"Nama Supplier (Wajib diisi)", // Ubah label dan keterangan
               required:true, 
               width:400,
-              options:{
-                url:"/api/supplier", 
-                template: "#nama#",
-                value: "#nama#", 
-                body:{
-                    template:"#nama#", 
-                    id:"#nama#" 
-                }
-              }
+              // options:{ // Dihapus
+              //   url:"/api/supplier", // Dihapus
+              //   template: "#nama#", // Dihapus
+              //   value: "#nama#", // Dihapus
+              //   body:{ // Dihapus
+              //       template:"#nama#", // Dihapus
+              //       id:"#nama#" // Dihapus
+              //   } // Dihapus
+              // } // Dihapus
             },
             { template:"<hr>", type:"clean", height:10 },
             { template:"<b>Daftar Item</b>", type:"clean", css:"webix_strong" },
@@ -526,7 +529,7 @@ webix.ready(function() {
           { view:"button", value:"Simpan Pembelian", css:"webix_primary", click:function(){
             var data = $$("form_pembelian").getValues();
             var rawItems=$$("table_items").serialize();
-            if(!data.nama_supplier || data.nama_supplier.trim()===""){ webix.message({ type:"error", text:"Nama supplier wajib diisi (Pilih dari dropdown)."}); return; }
+            if(!data.nama_supplier || data.nama_supplier.trim()===""){ webix.message({ type:"error", text:"Nama supplier wajib diisi."}); return; }
             
             var cleaned=[];
             for(var i=0;i<rawItems.length;i++){
@@ -748,8 +751,8 @@ webix.ui({
     head:"Detail Transaksi Pembelian",
     body:{
         rows:[
-            { template:"Detail Supplier", type:"header" },
-            { id:"detail_supplier", template:"Supplier: -", height:40, css:"webix_el_box" },
+            { template:"Detail Transaksi", type:"header" }, // Ubah Header
+            { id:"detail_supplier", template:"Transaksi ID: -", height:40, css:"webix_el_box" }, // Ubah label
 
             { template:"Daftar Produk", type:"header" },
 
@@ -790,7 +793,7 @@ webix.ui({
       tbl.on_click["editBtn"] = function(e, id) {
           const tr = this.getItem(id);
           if (!tr) return false;
-          $$("detail_supplier").setHTML("Supplier: <b>" + (tr.nama_supplier || "-") + "</b>");
+          $$("detail_supplier").setHTML("Transaksi: <b>" + (tr._id || "-") + "</b>"); // Diubah untuk menampilkan ID Transaksi
           $$("detail_items").clearAll();
           if (Array.isArray(tr.daftar_item)) {
               var items = tr.daftar_item.map(function(x){
