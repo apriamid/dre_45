@@ -1,4 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, make_response, flash, jsonify, request, g
+# --- Perbaikan #1: Import ProxyFix ---
+from werkzeug.middleware.proxy_fix import ProxyFix 
+
 from common.mongo_connection import MongoConnection
 from common.session_manage import SessionManager
 from common.managelogin import Loginaja
@@ -14,6 +17,19 @@ from blueprint.supplier_bp import supplier_bp
 app = Flask(__name__, template_folder="templates")
 app.secret_key = "kapita_secret_key"
 
+# =========================================================================
+# --- Perbaikan #1: Terapkan ProxyFix ---
+# Gunakan x_proto=1, atau coba 2 jika masih gagal. Ini menginstruksikan Flask 
+# untuk membaca header X-Forwarded-Proto dari Cloud Run.
+# =========================================================================
+app.wsgi_app = ProxyFix(
+    app.wsgi_app, 
+    x_for=1,    
+    x_host=1,   
+    x_proto=2   
+)
+# =========================================================================
+
 session_manager = SessionManager()
 managelogin = Loginaja()
 mongo = MongoConnection(connection_string=MONGODB_CONNECTION_STRING, db_name=MONGODB_DATABASE_NAME)
@@ -27,108 +43,102 @@ app.register_blueprint(supplier_bp, url_prefix="/api/supplier")
 
 
 @app.before_request
-def before_request_func():
-    """
-    Sebagai front-gate: memeriksa token pada setiap request non-public.
-    - API routes -> kembalikan JSON 401 jika tidak valid (tidak redirect)
-    - HTML protected pages -> redirect ke /login bila tidak valid
-    """
-    path = request.path
-
-    PUBLIC_ROUTES = {"/login", "/", "/favicon.ico"}
-  
-    if path.startswith("/static/"):
-        return None
-    if path in PUBLIC_ROUTES:
-        return None
-
+def before_request():
+    g.user = None
+    g.token_data = None
+    g.role = "guest"
+    
     token = request.cookies.get("token")
-    if path.startswith("/api/"):
-        if not token:
-            return jsonify({"success": False, "message": "Unauthorized"}), 401
 
-        session_data = session_manager.verify_token(token)
-        if not session_data:
-            return jsonify({"success": False, "message": "Invalid or expired token"}), 401
+    if token:
+        data = session_manager.verify_token(token)
+        if data:
+            g.token_data = data
+            g.user = mongo.db[MONGODB_COLLECTION_USER].find_one({"username": data["username"]})
+            if g.user:
+                g.role = g.user.get("role", "guest")
 
-        g.user = session_data
-        return None
-    if not token:
-        return redirect(url_for("login"))
-
-    session_data = session_manager.verify_token(token)
-    if not session_data:
-        resp = make_response(redirect(url_for("login")))
-        resp.delete_cookie("token", path="/")
-        return resp
-
-    g.user = session_data
-    return None
-
-@app.route("/")
-def index():
-    return redirect(url_for("login"))
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        data = request.get_json(force=True)
-        username = data.get("username")
-        password = data.get("password")
-        if not username or not password:
-            return jsonify({"success": False, "message": "Lengkapi semua kolom!"}), 400
+        username = request.form.get("username")
+        password = request.form.get("password")
+        
+        user_doc = managelogin.authenticate_user(username, password)
 
-        user = managelogin.authenticate_user(username, password)
-        if user:
-            token = session_manager.generate_token(user["username"], user["role"])
+        if user_doc:
+            role = user_doc.get("role")
+            token = session_manager.generate_token(user_doc)
 
-            resp = jsonify({"success": True, "role": user["role"]})
-            resp.set_cookie("token", token, httponly=True, samesite="Lax", path="/")
+            # --- Perbaikan #2: Tambahkan _scheme='https' ---
+            resp = make_response(redirect(url_for("root_dashboard", _scheme='https')))
+            resp.set_cookie("token", token, httponly=True, max_age=3600*24*7) # 1 week
             return resp
-
-        return jsonify({"success": False, "message": "Username atau Password salah!"}), 401
-
+        else:
+            flash("Username atau password salah", "error")
+    
     return render_template("login.html")
-
 
 @app.route("/logout")
 def logout():
-    token = request.cookies.get("token")
-    if token:
-        session_manager.remove_token(token)
-
-    resp = make_response(redirect(url_for("login")))
-    resp.delete_cookie("token", path="/")
-    flash("Logout berhasil!", "success")
+    # --- Perbaikan #2: Tambahkan _scheme='https' ---
+    resp = make_response(redirect(url_for("login", _scheme='https')))
+    resp.delete_cookie("token")
     return resp
+
+@app.route("/")
+def root_dashboard():
+    if not hasattr(g, 'user') or not g.user:
+        # --- Perbaikan #2: Tambahkan _scheme='https' ---
+        return redirect(url_for("login", _scheme='https'))
+    
+    user_role = g.user.get('role')
+    
+    if user_role == 'kasir':
+        # --- Perbaikan #2: Tambahkan _scheme='https' ---
+        return redirect(url_for("kasir_dashboard", _scheme='https'))
+        
+    if user_role in ('admin', 'superadmin'):
+        # --- Perbaikan #2: Tambahkan _scheme='https' ---
+        return redirect(url_for("admin_dashboard", _scheme='https'))
+        
+    # --- Perbaikan #2: Tambahkan _scheme='https' ---
+    return redirect(url_for("login", _scheme='https'))
 
 
 @app.route("/admin-dashboard")
 def admin_dashboard():
     if not hasattr(g, 'user') or not g.user:
-        return redirect(url_for("login"))
+        # --- Perbaikan #2: Tambahkan _scheme='https' ---
+        return redirect(url_for("login", _scheme='https'))
     user_role = g.user.get('role')
-
+    
     if user_role == 'kasir':
-        return redirect(url_for("kasir_dashboard"))
+        # --- Perbaikan #2: Tambahkan _scheme='https' ---
+        return redirect(url_for("kasir_dashboard", _scheme='https'))
         
     if user_role in ('admin', 'superadmin'):
         return render_template("admindashboard.html")
-    return redirect(url_for("login"))
+    # --- Perbaikan #2: Tambahkan _scheme='https' ---
+    return redirect(url_for("login", _scheme='https'))
 
 
 @app.route("/kasir-dashboard")
 def kasir_dashboard():
     if not hasattr(g, 'user') or not g.user:
-        return redirect(url_for("login"))
+        # --- Perbaikan #2: Tambahkan _scheme='https' ---
+        return redirect(url_for("login", _scheme='https'))
     user_role = g.user.get('role')
     
     if user_role in ('admin', 'superadmin'):
-        return redirect(url_for("admin_dashboard"))
+        # --- Perbaikan #2: Tambahkan _scheme='https' ---
+        return redirect(url_for("admin_dashboard", _scheme='https'))
         
     if user_role == 'kasir':
         return render_template("sistemkasir.html")
-    return redirect(url_for("login"))
+    # --- Perbaikan #2: Tambahkan _scheme='https' ---
+    return redirect(url_for("login", _scheme='https'))
 
 
 @app.route("/api/me")
@@ -154,8 +164,12 @@ def api_userinfo():
     if not data:
         return jsonify({"success": False, "message": "Invalid token"}), 401
 
-    return jsonify({"success": True, "username": data["username"], "role": data["role"]}), 200
+    user_info = mongo.db[MONGODB_COLLECTION_USER].find_one({"username": data["username"]}, {"_id": 0, "password": 0, "id_karyawan": 0})
+    if user_info:
+        return jsonify({"success": True, "data": user_info}), 200
+    return jsonify({"success": False, "message": "User not found"}), 404
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
+    

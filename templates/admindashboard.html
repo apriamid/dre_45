@@ -35,6 +35,44 @@ function formatRupiah(angka){
     return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR', minimumFractionDigits: 0}).format(numericAngka);
 }
 
+
+
+if (window.location.protocol === "https:") {
+    webix.proxy.local.url = function(view, config) {
+        let url = config.url;
+        
+        // 1. Pastikan URL API Anda dimulai dengan /api/
+        if (url && typeof url === 'string' && url.startsWith("/api/")) {
+            // 2. Tambahkan protokol HTTPS secara paksa ke URL absolut
+            return "https://" + window.location.host + url;
+        }
+
+        // 3. Kembalikan URL asli jika bukan API
+        return url; 
+    };
+    
+    // Perbaikan untuk panggilan AJAX (seperti webix.ajax().put/post/del)
+    webix.extend(webix.ajax, {
+        master: function(url, data, callback) {
+            if (url && typeof url === 'string' && url.startsWith("/api/")) {
+                url = "https://" + window.location.host + url;
+            }
+            // Panggil fungsi master AJAX Webix asli
+            return this.master(url, data, callback); 
+        }
+    }, true);
+
+    // Perbaikan untuk Fetch API (untuk laporan)
+    window.originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+        let url = input;
+        if (typeof input === 'string' && input.startsWith("/api/")) {
+            url = "https://" + window.location.host + input;
+        }
+        return window.originalFetch(url, init);
+    };
+}
+
 // =====================================================================================================
 //                                           FUNGSI LOGOUT
 // =====================================================================================================
