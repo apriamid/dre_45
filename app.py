@@ -1,6 +1,4 @@
 from flask import Flask, render_template, redirect, url_for, make_response, flash, jsonify, request, g
-# 🚨 WAJIB: Import ProxyFix
-from werkzeug.middleware.proxy_fix import ProxyFix 
 from common.mongo_connection import MongoConnection
 from common.session_manage import SessionManager
 from common.managelogin import Loginaja
@@ -15,18 +13,6 @@ from blueprint.supplier_bp import supplier_bp
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = "kapita_secret_key"
-
-# =========================================================================
-# AKTIVASI PROXYFIX UNTUK CLOUD RUN
-# =========================================================================
-
-app.wsgi_app = ProxyFix(
-    app.wsgi_app, 
-    x_for=1,    
-    x_host=1,   
-    x_proto=1   
-)
-
 
 session_manager = SessionManager()
 managelogin = Loginaja()
