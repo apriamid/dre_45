@@ -36,38 +36,36 @@ function formatRupiah(angka){
 }
 
 
-
 if (window.location.protocol === "https:") {
-    webix.proxy.local.url = function(view, config) {
-        let url = config.url;
-        
-        // 1. Pastikan URL API Anda dimulai dengan /api/
+    
+    const forceHttpsUrl = function(url) {
         if (url && typeof url === 'string' && url.startsWith("/api/")) {
-            // 2. Tambahkan protokol HTTPS secara paksa ke URL absolut
             return "https://" + window.location.host + url;
         }
-
-        // 3. Kembalikan URL asli jika bukan API
-        return url; 
+        return url;
     };
-    
-    // Perbaikan untuk panggilan AJAX (seperti webix.ajax().put/post/del)
+
+    // 1. Memaksa HTTPS untuk Webix Data Loading 
+    webix.proxy.local.url = function(view, config) {
+        config.url = forceHttpsUrl(config.url);
+        return webix.proxy.base.url.apply(this, arguments);
+    };
+
+    // 2. Memaksa HTTPS untuk Webix AJAX PUT/POST/DELETE 
     webix.extend(webix.ajax, {
-        master: function(url, data, callback) {
-            if (url && typeof url === 'string' && url.startsWith("/api/")) {
-                url = "https://" + window.location.host + url;
-            }
+        master: function(url, data, callback, method) {
+            url = forceHttpsUrl(url);
             // Panggil fungsi master AJAX Webix asli
-            return this.master(url, data, callback); 
+            return this.master(url, data, callback, method); 
         }
     }, true);
-
-    // Perbaikan untuk Fetch API (untuk laporan)
+    
+    // 3. Memaksa HTTPS untuk Fetch API 
     window.originalFetch = window.fetch;
     window.fetch = function(input, init) {
         let url = input;
-        if (typeof input === 'string' && input.startsWith("/api/")) {
-            url = "https://" + window.location.host + input;
+        if (typeof input === 'string') {
+            url = forceHttpsUrl(input);
         }
         return window.originalFetch(url, init);
     };
