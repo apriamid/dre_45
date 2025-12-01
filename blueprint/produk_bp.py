@@ -1,7 +1,6 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from bson import ObjectId
-
 from common.mongo_connection import MongoConnection
 from common.validasi_sanitasi import validate_produk_input, normalize_for_client
 from common.id_generator import generate_produk_id_from_category
@@ -149,7 +148,7 @@ def update_produk(pid):
 # ==========================================================
 #                        DELETE
 # ==========================================================
-@produk_bp.route("/string:pid>", methods=["DELETE"])
+@produk_bp.route("/<string:pid>", methods=["DELETE"])
 @produk_bp.route("", methods=["DELETE"])
 def delete_produk(pid=None):
     """
@@ -167,12 +166,12 @@ def delete_produk(pid=None):
             identifier = body.get("id") or body.get("_id")
 
         if not identifier:
-            return jsonify({"success": False, "message": "ID tidak diberikan"}), 400
+            return jsonify({"success": False, "message": "ID produk wajib diberikan"}), 400
 
-        q = build_flexible_query(identifier)
+        q = build_flexible_query(identifier) 
         res = mongo.db[MONGODB_COLLECTION_PRODUCT].delete_one(q)
         if res.deleted_count == 0:
             return jsonify({"success": False, "message": "Produk tidak ditemukan"}), 404
         return jsonify({"success": True, "message": "Produk berhasil dihapus"}), 200
     except Exception as e:
-        return jsonify({"success": False, "message": "Gagal menghapus produk", "detail": str(e)}), 500
+        return jsonify({"success": False, "message": f"Gagal menghapus produk: {str(e)}"}), 500

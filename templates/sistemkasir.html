@@ -453,12 +453,10 @@
         this.classList.add('active');
         const id = this.dataset.id;
         if(id === 'pos'){
-          // Tampilkan POS, Sembunyikan History
           posSection.style.display = 'flex';
           historySection.style.display = 'none';
           pageTitle.textContent = 'Point of Sale';
         } else if(id === 'history'){
-          // Sembunyikan POS, Tampilkan History
           posSection.style.display = 'none';
           historySection.style.display = 'block';
           pageTitle.textContent = 'Riwayat Transaksi';

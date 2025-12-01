@@ -52,10 +52,27 @@ def is_valid_email_gmail(email):
 
 
 def is_valid_number_positive(value):
-    """Memastikan value adalah angka >= 0"""
+    """Memastikan value adalah angka >= 0 dan bukan string negatif seperti "-0"."""
+    if isinstance(value, str) and value.strip().startswith("-") and not value.strip() == "0":
+        # Block string negatif eksplisit, termasuk "-0"
+        # Namun, kita harus berhati-hati agar tidak memblokir nilai numerik negatif
+        # jika itu berasal dari konversi (misal float(-0) => 0.0)
+        # Cara yang lebih aman: coba konversi, lalu cek apakah string asli mengandung '-'
+        pass 
+
     try:
         val = float(value)
-        return val >= 0
+        # 1. Nilai numerik harus >= 0
+        # 2. Jika nilai == 0, pastikan string asli BUKAN "-0" atau sejenisnya
+        if val < 0:
+            return False
+        
+        # Cek jika input adalah string -0
+        if val == 0 and isinstance(value, str) and value.strip().lstrip('+').lstrip('-').strip() == "0" and value.strip().startswith("-"):
+             # untuk menangani kasus seperti "-0", "-0.0", "-000"
+             return False
+
+        return True
     except (ValueError, TypeError):
         return False
 
@@ -102,7 +119,7 @@ def validate_karyawan_input(data):
     try:
         nama = str(data.get("nama", "")).strip()
         jabatan = str(data.get("jabatan", "")).strip().capitalize()
-        gaji = data.get("gaji", 0)
+        gaji_input = data.get("gaji", 0) # Menggunakan gaji_input sebagai string/input mentah
 
         if not nama or not jabatan:
             return False, "Nama dan jabatan wajib diisi"
@@ -110,8 +127,12 @@ def validate_karyawan_input(data):
         if jabatan not in ["Admin", "Kasir"]:
             return False, "Jabatan hanya boleh 'Admin' atau 'Kasir'"
 
+        # Cek apakah input gaji adalah string negatif dari nol (misal "-0")
+        if isinstance(gaji_input, str) and gaji_input.strip().lstrip('+').lstrip('-').strip() == "0" and gaji_input.strip().startswith("-"):
+            return False, "Gaji harus berupa angka non-negatif" # Tambahkan validasi eksplisit
+
         try:
-            gaji = float(gaji)
+            gaji = float(gaji_input)
             if gaji < 0:
                 return False, "Gaji tidak boleh negatif"
         except ValueError:
@@ -134,26 +155,33 @@ def validate_produk_input(data):
     data = sanitize_dict(data)
     nama = data.get("nama_produk", "")
     kategori = data.get("kategori", "")
-    stok = data.get("stok", 0)
-    harga = data.get("harga", 0)
+    stok_input = data.get("stok", 0) # Input mentah
+    harga_input = data.get("harga", 0) # Input mentah
 
     if not is_valid_string(nama):
         return False, "Nama produk hanya boleh huruf dan spasi."
     if not is_valid_string(kategori):
         return False, "Kategori hanya boleh huruf dan spasi."
-
+    
+    # Validasi Stok
+    if isinstance(stok_input, str) and stok_input.strip().lstrip('+').lstrip('-').strip() == "0" and stok_input.strip().startswith("-"):
+        return False, "Stok harus berupa integer positif." # Tambahkan validasi eksplisit
     try:
-        stok = int(stok)
+        stok = int(stok_input)
         if stok < 0:
             raise ValueError()
     except Exception:
         return False, "Stok harus berupa integer positif."
 
-    if not is_valid_number_positive(harga):
-        return False, "Harga harus angka >= 0."
+    # Validasi Harga
+    if isinstance(harga_input, str) and harga_input.strip().lstrip('+').lstrip('-').strip() == "0" and harga_input.strip().startswith("-"):
+        return False, "Harga harus angka non-negatif (>= 0)." # Tambahkan validasi eksplisit
+
+    if not is_valid_number_positive(harga_input):
+        return False, "Harga harus angka non-negatif (>= 0)."
 
     data["stok"] = stok
-    data["harga"] = float(harga)
+    data["harga"] = float(harga_input)
     return True, data
 
 

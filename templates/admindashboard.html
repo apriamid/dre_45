@@ -13,7 +13,7 @@
 
 <script>
 // ====================================================================================================
-//            STUB FUNCTION  (Untuk mencegah error jika fungsi ini belum terdefinisi)
+//                                          STUB FUNCTION  
 // ====================================================================================================
 function loadLaporanProfit(){
     console.log("Fungsi loadLaporanProfit dipanggil.");
@@ -279,18 +279,17 @@ webix.ready(function() {
   const formFields = {
     karyawan:[
       { view:"text", name:"_id", hidden:true },
-      { view:"text", name:"nama", label:"Nama" },
-      { view:"richselect", name:"jabatan", label:"Jabatan", options:[ { id:"Admin", value:"Admin" }, { id:"Kasir", value:"Kasir" }, { id:"Superadmin", value:"Superadmin" } ], required:true },
-      { view:"text", name:"gaji", label:"Gaji" },
-      { view:"text", name:"username", label:"Username (Login)" },
-      { view:"text", type:"password", name:"password", label:"Password (Login)" }
+      { view:"text", name:"nama", label:"Nama",required:true },
+      { view:"richselect", name:"jabatan", label:"Jabatan", options:[ { id:"Admin", value:"Admin" }, { id:"Kasir", value:"Kasir" } ], required:true },
+      { view:"text", name:"gaji", label:"Gaji",required:true },
+      { view:"text", name:"username", label:"Username",required:true },
+      { view:"text", type:"password", name:"password", label:"Password",required:true }
     ],
     produk:[
-      { view:"text", name:"id", label:"Kode Produk (Auto)", readonly:true, css:{"background-color":"#f0f0f0"} }, 
-      { view:"text", name:"nama_produk", label:"Nama Produk" },
-      { view:"text", name:"kategori", label:"Kategori" },
-      { view:"text", name:"stok", label:"Stok" },
-      { view:"text", name:"harga", label:"Harga" }
+      { view:"text", name:"nama_produk", label:"Nama Produk",required:true },
+      { view:"text", name:"kategori", label:"Kategori",required:true },
+      { view:"text", name:"stok", label:"Stok",required:true },
+      { view:"text", name:"harga", label:"Harga",required:true}
     ],
     
   };
@@ -308,6 +307,11 @@ webix.ready(function() {
             { view:"button", value:"Simpan", css:"webix_primary", click:function(){
               var form = $$("form_"+entity);
               var data = form.getValues();
+              if (!form.validate()){
+                webix.message({type:"error", text:"Mohon isi semua field wajib."});
+                return; 
+              }
+
               for (let k in data) if (typeof data[k] === "string") data[k] = data[k].replace(/<[^>]*>?/gm, '').trim();
 
               if(data._id){
@@ -427,7 +431,7 @@ webix.ready(function() {
               view:"text", 
               id:"supplier_text",
               name:"nama_supplier", 
-              label:"Nama Supplier (Wajib diisi)", 
+              label:"Nama Supplier", 
               required:true, 
               width:400,
             },
@@ -436,8 +440,8 @@ webix.ready(function() {
             { view:"datatable", id:"table_items", editable:true, scroll:"x", select:"row",
               columns:[
                 { id:"no", header:"No", width:50, template:function(obj, common, value, col, index){ return index+1; }, css:"text-center" },
-                { id:"nama_produk", header:"Nama Produk", editor:"text", fillspace:true, minWidth:200, css:{"text-align":"left"} },
-                { id:"kategori_produk", header:"Kategori", editor:"text", width:140, css:{"text-align":"left"} },
+                { id:"nama_produk", header:"Nama Produk", editor:"text", fillspace:true, minWidth:200, css:{"text-align":"left"} ,required:true},
+                { id:"kategori_produk", header:"Kategori", editor:"text", width:140, css:{"text-align":"left"},requiered:true },
                 { id:"kode_produk", header:"Kode Produk", width:120, css:{"text-align":"center"} },
                 { id:"jumlah", header:"Jumlah", editor:"text", width:100, css:{"text-align":"center"} },
                 { id:"harga_beli", header:"Harga Beli", editor:"text", width:140, css:{"text-align":"right"}, template:o=>formatRupiah(parseInt(o.harga_beli)||0) },
@@ -499,7 +503,7 @@ webix.ready(function() {
               if(!kode && kategori){ kode = generateKodeClient(kategori); }
 
               if(!nama || !kategori || jumlah<=0 || harga<=0){
-                webix.message({ type:"error", text:"Item ke-"+(i+1)+" tidak valid. Pastikan Nama, Kategori, Jumlah>0, Harga>0."}); return;
+                webix.message({ type:"error", text:"Semua field wajib diisi"}); return;
               }
               cleaned.push({
                 nama_produk:nama,

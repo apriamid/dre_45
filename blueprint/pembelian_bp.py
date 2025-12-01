@@ -4,7 +4,7 @@ from bson import ObjectId
 import re
 
 from common.mongo_connection import MongoConnection
-from config import *
+from config import * # Diasumsikan MONGODB_COLLECTION_PRODUCT, MONGODB_COLLECTION_STOK, dll. ada di sini
 
 pembelian_bp = Blueprint("pembelian_bp", __name__)
 mongo = MongoConnection(MONGODB_CONNECTION_STRING, MONGODB_DATABASE_NAME)
@@ -13,14 +13,7 @@ mongo = MongoConnection(MONGODB_CONNECTION_STRING, MONGODB_DATABASE_NAME)
 def normalize(doc):
     """
     Mengubah struktur dokumen MongoDB menjadi JSON-friendly.
-
-    Fungsi ini mengonversi ObjectId menjadi string serta
-    mengonversi datetime menjadi format ISO agar dapat
-    dikembalikan melalui API.
-    Args:
-        doc (dict): Dokumen pembelian dari database.
-    Returns:
-        dict: Dokumen yang sudah dinormalisasi untuk JSON.
+    ...
     """
     if not doc:
         return doc
@@ -36,15 +29,7 @@ def normalize(doc):
 def generate_pembelian_id():
     """
     Menghasilkan ID unik untuk transaksi pembelian.
-
-    Format ID:
-        PB001, PB002, PB003, ...
-    Algoritma:
-        - Mencari semua dokumen dengan pola ID "PBxxx".
-        - Mengambil angka terbesar.
-        - Menambahkan +1.
-    Returns:
-        str: ID pembelian berikutnya.
+    ...
     """
     coll = mongo.db[MONGODB_COLLECTION_T_PEMBELIAN]
     docs = coll.find({"_id": {"$regex": "^PB[0-9]{3,}$"}}, {"_id": 1})
@@ -65,13 +50,7 @@ def generate_pembelian_id():
 def find_max_kode_for_prefix(prefix):
     """
     Menemukan kode produk tertinggi berdasarkan prefix kategori.
-    Prefix contoh:
-        - "DET" → DET001, DET002
-        - "MIN" → MIN001, MIN002
-    Args:
-        prefix (str): Tiga huruf pertama kategori produk.
-    Returns:
-        int: Nomor terbesar yang ditemukan pada kode produk dengan prefix tersebut.
+    ...
     """
     prefix_esc = re.escape(prefix)
     regex = re.compile(rf"^{prefix_esc}0*([0-9]+)$", re.IGNORECASE)
@@ -102,14 +81,7 @@ def find_max_kode_for_prefix(prefix):
 def generate_kode_server_side(kategori, used_local_counters):
     """
     Membuat kode produk berdasarkan kategori (prefix tiga huruf).
-    Format:
-        {PREFIX}{003}
-        Contoh: DET → DET001, DET002, dst.
-    Args:
-        kategori (str): Nama kategori produk.
-        used_local_counters (dict): Counter sementara untuk prefix tertentu.
-    Returns:
-        str: Kode produk unik berdasarkan kategori.
+    ...
     """
     pref = (kategori or "").strip()[0:3].upper() or "XXX"
     db_max = find_max_kode_for_prefix(pref)
@@ -135,42 +107,25 @@ def list_pembelian():
         return jsonify([normalize(d) for d in docs]), 200
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-
-
 # ================================================================================
 #                                  CREATE
 # ================================================================================
 @pembelian_bp.route("", methods=["POST"])
 def add_pembelian():
     """
-    Membuat transaksi pembelian baru.
-
-    Fitur:
-        - Menghasilkan ID pembelian otomatis.
-        - Mengolah daftar item & menghitung subtotal.
-        - Menambahkan produk baru otomatis ke master produk jika belum ada.
-        - Update stok produk.
-        - Membuat log stok (pembelian).
-    Body JSON:
-        nama_supplier (str)
-        daftar_item (list):
-            - nama_produk
-            - kategori
-            - kode_produk (opsional)
-            - jumlah
-            - harga_beli
-    Returns:
-        tuple: JSON hasil penyimpanan pembelian.
+    Membuat transaksi pembelian baru dengan validasi wajib isi yang ketat,
+    menggunakan pesan kesalahan yang lebih umum.
     """
     try:
         payload = request.get_json(force=True)
         nama_supplier = payload.get("nama_supplier", "").strip()
         daftar_item = payload.get("daftar_item") or []
+        dibuat_oleh = payload.get("dibuat_oleh", "").strip() 
 
-        if not nama_supplier:
-            return jsonify({"success": False, "message": "Nama supplier wajib diisi"}), 400
+        if not nama_supplier or not dibuat_oleh:
+            return jsonify({"success": False, "message": "Field (Nama Supplier/Dibuat Oleh) wajib diisi"}), 400
         if not daftar_item:
-            return jsonify({"success": False, "message": "Daftar item kosong"}), 400
+            return jsonify({"success": False, "message": "Daftar item pembelian kosong"}), 400
 
         total = 0
         items = []
@@ -179,17 +134,19 @@ def add_pembelian():
         for idx, it in enumerate(daftar_item):
             nama = (it.get("nama_produk") or "").strip()
             kategori = (it.get("kategori") or "").strip()
-            kode = (it.get("kode_produk") or "").strip()
-            jumlah = int(it.get("jumlah") or 0)
-            harga_beli = int(it.get("harga_beli") or 0)
-
-            if not nama:
-                return jsonify({"success": False, "message": f"Nama produk item {idx+1} tidak boleh kosong"}), 400
-            if jumlah <= 0 or harga_beli <= 0:
-                return jsonify({"success": False, "message": f"Jumlah & harga item {idx+1} harus > 0"}), 400
-
+            kode = (it.get("kode_produk") or "").strip() 
+            
+            try:
+                jumlah = int(float(it.get("jumlah") or 0)) 
+                harga_beli = int(float(it.get("harga_beli") or 0))
+            except:
+                return jsonify({"success": False, "message": "Field wajib diisi dan harus berupa angka "}), 400
+            if not nama or not kategori or jumlah <= 0 or harga_beli <= 0:
+                return jsonify({"success": False, "message": "Semua field Item wajib diisi dan harus bernilai positif."}), 400
+            
+            # Generate kode jika kosong
             if not kode:
-                kode = generate_kode_server_side(kategori or "XXX", used_local_counters)
+                kode = generate_kode_server_side(kategori, used_local_counters)
 
             subtotal = jumlah * harga_beli
             total += subtotal
@@ -202,8 +159,7 @@ def add_pembelian():
                 "harga_beli": harga_beli,
                 "subtotal": subtotal
             })
-
-        new_id = generate_pembelian_id()
+        new_id = generate_pembelian_id() 
         now = datetime.utcnow()
 
         mongo.db[MONGODB_COLLECTION_T_PEMBELIAN].insert_one({
@@ -212,7 +168,7 @@ def add_pembelian():
             "daftar_item": items,
             "total_pembelian": total,
             "tanggal_pembelian": now,
-            "dibuat_oleh": payload.get("dibuat_oleh"),
+            "dibuat_oleh": dibuat_oleh, 
             "created_at": now
         })
 
@@ -221,43 +177,39 @@ def add_pembelian():
 
         for it in items:
             kode = it["kode_produk"]
-            nama = it["nama_produk"]
-            kategori = it["kategori"]
             jumlah = it["jumlah"]
             harga_beli = it["harga_beli"]
+            
+            # Perhitungan Harga Jual Otomatis (Harga Beli + 40%)
+            harga_jual_otomatis = harga_beli * 1.4
 
             update_doc = {
                 "$set": {
-                    "nama_produk": nama,
-                    "kategori": kategori,
+                    "nama_produk": it["nama_produk"],
+                    "kategori": it["kategori"],
                     "kode_produk": kode,
                     "last_harga_beli": harga_beli,
-                    "harga": it.get("harga_jual") or harga_beli * 1.2,
+                    "harga": harga_jual_otomatis, 
                     "updated_at": now
                 },
                 "$inc": {"stok": jumlah}
             }
 
-            existing = prod_coll.find_one({"kode_produk": kode})
-            if existing:
-                prod_coll.update_one({"kode_produk": kode}, update_doc)
-            else:
-                prod_coll.update_one(
-                    {"kode_produk": kode},
-                    {
-                        "$setOnInsert": {"_id": kode, "tanggal": now},
-                        **update_doc
-                    },
-                    upsert=True
-                )
+            prod_coll.update_one(
+                {"kode_produk": kode},
+                {
+                    "$setOnInsert": {"_id": kode, "tanggal": now},
+                    **update_doc
+                },
+                upsert=True
+            )
 
             stok_log.insert_one({
                 "id_produk": kode,
                 "jenis": "pembelian",
                 "jumlah": jumlah,
                 "tanggal": now,
-                "referensi": new_id,
-                "store_id": "STR001"
+                "referensi": new_id
             })
 
         return jsonify({
@@ -279,10 +231,7 @@ def add_pembelian():
 def delete_form_pembelian(bid):
     """
     Menghapus satu transaksi pembelian berdasarkan ID.
-    Args:
-        bid (str): ID pembelian (misal: PB001).
-    Returns:
-        tuple: JSON status penghapusan.
+    ...
     """
     try:
         res = mongo.db[MONGODB_COLLECTION_T_PEMBELIAN].delete_one({"_id": bid})
