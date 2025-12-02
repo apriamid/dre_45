@@ -18,6 +18,7 @@ def get_next_numeric_suffix_for_prefix(mongo, collection_name, id_field, prefix)
         if n > maxn: maxn = n
     return maxn + 1
 
+
 def generate_karyawan_id(mongo, coll_name, jabatan=None):
     """
     Generate ID unik berdasarkan huruf pertama jabatan.
@@ -65,5 +66,4 @@ def generate_produk_id_from_category(mongo, MONGODB_COLLECTION_PRODUCT, category
             prefix = (''.join(letters).upper() + "XXX")[:3]
     next_num = get_next_numeric_suffix_for_prefix(mongo, MONGODB_COLLECTION_PRODUCT, "id", prefix)
     return prefix + _zero_pad_num(next_num)
-
 

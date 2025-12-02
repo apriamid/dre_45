@@ -35,14 +35,15 @@ def build_flexible_query(identifier):
 #                       READ ALL
 # ==========================================================
 @produk_bp.route("", methods=["GET"])
+@produk_bp.route("/", methods=["GET"]) 
 def get_all_produk():
-    """
-    Mengambil seluruh data produk dari database.
-    Returns:
-        tuple: JSON list produk dan status HTTP.
-    """
     try:
-        docs = list(mongo.db[MONGODB_COLLECTION_PRODUCT].find())
+        query = {}
+        nama_produk_query = request.args.get("nama", None) 
+        if nama_produk_query:
+            query["nama_produk"] = nama_produk_query 
+
+        docs = list(mongo.db[MONGODB_COLLECTION_PRODUCT].find(query))
         return jsonify([normalize_for_client(d) for d in docs]), 200
     except Exception as e:
         return jsonify({"success": False, "message": "Gagal mengambil data", "detail": str(e)}), 500
@@ -69,48 +70,66 @@ def get_produk(pid):
     except Exception as e:
         return jsonify({"success": False, "message": "Server error", "detail": str(e)}), 500
 
-
 # ==========================================================
 #                          CREATE
 # ==========================================================
 @produk_bp.route("", methods=["POST"])
 def add_produk():
     """
-    Menambahkan produk baru ke database.
-    Body JSON:
-        nama_produk (str)
-        kategori (str)
-        harga (int/float)
-        stok (int)
-        dan field lain sesuai kebutuhan validasi.
-    Returns:
-        tuple: JSON hasil insert dan status HTTP.
+    Menambahkan produk baru ke database atau menambah stok jika produk sudah ada.
     """
     try:
         data = request.get_json(force=True)
-        valid, clean = validate_produk_input(data)
+        valid, clean = validate_produk_input(data) 
         if not valid:
             return jsonify({"success": False, "message": clean}), 400
 
-        category = clean.get("kategori", "")
+        nama_produk = clean.get("nama_produk", "")
+        stok_baru = int(clean.get("stok", 0)) 
 
-        for _ in range(1, 20):
-            new_id = generate_produk_id_from_category(mongo, MONGODB_COLLECTION_PRODUCT, category)
-            if not mongo.db[MONGODB_COLLECTION_PRODUCT].find_one({"_id": new_id}):
-                break
+        # 1. Cek produk 
+        existing_product = mongo.db[MONGODB_COLLECTION_PRODUCT].find_one(
+            {"nama_produk": nama_produk}
+        )
+
+        if existing_product:
+            # Jika sudah ada, tambahkan stok 
+            res = mongo.db[MONGODB_COLLECTION_PRODUCT].update_one(
+                {"_id": existing_product["_id"]},
+                {"$inc": {"stok": stok_baru}, "$set": {"tanggal_update": datetime.utcnow()}} 
+            )
+            return jsonify({
+                "success": True, 
+                "message": f"Stok produk '{nama_produk}' berhasil ditambahkan ({stok_baru} unit)",
+                "updated_id": normalize_for_client(existing_product)["id"]
+            }), 200
+
         else:
-            return jsonify({"success": False, "message": "Gagal membuat ID unik"}), 500
+            category = clean.get("kategori", "")
 
-        clean["_id"] = new_id
-        clean["tanggal"] = datetime.utcnow()
+            new_id = None
+            for _ in range(1, 20):
+                new_id = generate_produk_id_from_category(mongo, MONGODB_COLLECTION_PRODUCT, category)
+                if not mongo.db[MONGODB_COLLECTION_PRODUCT].find_one({"_id": new_id}):
+                    break
+            else:
+                return jsonify({"success": False, "message": "Gagal membuat ID unik"}), 500
 
-        mongo.db[MONGODB_COLLECTION_PRODUCT].insert_one(clean)
+            clean["_id"] = new_id
+            clean["tanggal_dibuat"] = datetime.utcnow()
+            clean["tanggal_update"] = datetime.utcnow()
+            
+            if 'harga_jual' not in clean: clean['harga_jual'] = 0
+            if 'harga_beli' not in clean: clean['harga_beli'] = 0
 
-        return jsonify({"success": True, "data": clean}), 201
+            mongo.db[MONGODB_COLLECTION_PRODUCT].insert_one(clean)
+
+            return jsonify({"success": True, "data": clean, "message": "Produk baru berhasil ditambahkan"}), 201
+            
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"success": False, "message": "Gagal menambah produk", "detail": str(e)}), 500
+        return jsonify({"success": False, "message": "Gagal memproses produk", "detail": str(e)}), 500
 
 
 # ==========================================================

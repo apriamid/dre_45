@@ -110,12 +110,9 @@ def list_pembelian():
 # ================================================================================
 #                                  CREATE
 # ================================================================================
+#
 @pembelian_bp.route("", methods=["POST"])
 def add_pembelian():
-    """
-    Membuat transaksi pembelian baru dengan validasi wajib isi yang ketat,
-    menggunakan pesan kesalahan yang lebih umum.
-    """
     try:
         payload = request.get_json(force=True)
         nama_supplier = payload.get("nama_supplier", "").strip()
@@ -128,82 +125,98 @@ def add_pembelian():
             return jsonify({"success": False, "message": "Daftar item pembelian kosong"}), 400
 
         total = 0
-        items = []
+        items_to_save = []
+        prod_coll = mongo.db[MONGODB_COLLECTION_PRODUCT]
         used_local_counters = {}
 
-        for idx, it in enumerate(daftar_item):
+        for it in daftar_item:
             nama = (it.get("nama_produk") or "").strip()
-            kategori = (it.get("kategori") or "").strip()
-            kode = (it.get("kode_produk") or "").strip() 
-            
             try:
                 jumlah = int(float(it.get("jumlah") or 0)) 
                 harga_beli = int(float(it.get("harga_beli") or 0))
             except:
-                return jsonify({"success": False, "message": "Field wajib diisi dan harus berupa angka "}), 400
-            if not nama or not kategori or jumlah <= 0 or harga_beli <= 0:
-                return jsonify({"success": False, "message": "Semua field Item wajib diisi dan harus bernilai positif."}), 400
+                return jsonify({"success": False, "message": "Jumlah dan Harga harus angka"}), 400
             
-            # Generate kode jika kosong
-            if not kode:
-                kode = generate_kode_server_side(kategori, used_local_counters)
+            if not nama or jumlah <= 0 or harga_beli <= 0:
+                return jsonify({"success": False, "message": "Nama, Jumlah, dan Harga wajib valid"}), 400
+            existing_prod = prod_coll.find_one({"nama_produk": nama})
+            
+            if existing_prod:
+                kode = existing_prod.get("_id") or existing_prod.get("id")
+                kategori = existing_prod.get("kategori")
+                is_new = False
+            else:
+                kategori = (it.get("kategori") or "").strip()
+                kode = (it.get("kode_produk") or "").strip()
+                if not kategori:
+                     return jsonify({"success": False, "message": f"Produk baru '{nama}' wajib memiliki kategori"}), 400
+                if not kode:
+                    kode = generate_kode_server_side(kategori, used_local_counters)
+                is_new = True
 
             subtotal = jumlah * harga_beli
             total += subtotal
 
-            items.append({
+            items_to_save.append({
                 "kode_produk": kode,
                 "nama_produk": nama,
                 "kategori": kategori,
                 "jumlah": jumlah,
                 "harga_beli": harga_beli,
-                "subtotal": subtotal
+                "subtotal": subtotal,
+                "is_new_product": is_new 
             })
+
         new_id = generate_pembelian_id() 
         now = datetime.utcnow()
+
+        # Bersihkan penanda internal sebelum save ke Mongo
+        clean_items_for_db = [{k:v for k,v in i.items() if k != 'is_new_product'} for i in items_to_save]
 
         mongo.db[MONGODB_COLLECTION_T_PEMBELIAN].insert_one({
             "_id": new_id,
             "nama_supplier": nama_supplier,
-            "daftar_item": items,
+            "daftar_item": clean_items_for_db,
             "total_pembelian": total,
             "tanggal_pembelian": now,
             "dibuat_oleh": dibuat_oleh, 
             "created_at": now
         })
-
-        prod_coll = mongo.db[MONGODB_COLLECTION_PRODUCT]
         stok_log = mongo.db[MONGODB_COLLECTION_STOK]
 
-        for it in items:
+        for it in items_to_save:
             kode = it["kode_produk"]
             jumlah = it["jumlah"]
             harga_beli = it["harga_beli"]
             
-            # Perhitungan Harga Jual Otomatis (Harga Beli + 40%)
-            harga_jual_otomatis = harga_beli * 1.4
-
-            update_doc = {
-                "$set": {
+            # Jika produk baru, set harga jual otomatis (Contoh: Beli + 40%)
+            # Jika produk lama, kita hanya update harga_beli terakhir, stok, dan update_at
+            if it["is_new_product"]:
+                harga_jual_otomatis = harga_beli * 1.4
+                prod_doc = {
+                    "_id": kode, 
+                    "id": kode,
                     "nama_produk": it["nama_produk"],
                     "kategori": it["kategori"],
-                    "kode_produk": kode,
-                    "last_harga_beli": harga_beli,
-                    "harga": harga_jual_otomatis, 
-                    "updated_at": now
-                },
-                "$inc": {"stok": jumlah}
-            }
-
-            prod_coll.update_one(
-                {"kode_produk": kode},
-                {
-                    "$setOnInsert": {"_id": kode, "tanggal": now},
-                    **update_doc
-                },
-                upsert=True
-            )
-
+                    "stok": jumlah,
+                    "harga_beli": harga_beli,
+                    "harga_jual": harga_jual_otomatis,
+                    "tanggal_dibuat": now,
+                    "tanggal_update": now,
+                    "status": "aktif"
+                }
+                prod_coll.insert_one(prod_doc)
+            else:
+                prod_coll.update_one(
+                    {"_id": kode}, 
+                    {
+                        "$inc": {"stok": jumlah},
+                        "$set": {
+                            "harga_beli": harga_beli, 
+                            "tanggal_update": now
+                        }
+                    }
+                )
             stok_log.insert_one({
                 "id_produk": kode,
                 "jenis": "pembelian",
@@ -214,7 +227,7 @@ def add_pembelian():
 
         return jsonify({
             "success": True,
-            "message": "Pembelian berhasil disimpan dan produk diperbarui otomatis",
+            "message": "Pembelian berhasil disimpan.",
             "id": new_id
         }), 201
 

@@ -58,7 +58,6 @@ def is_valid_number_positive(value):
         if val < 0:
             return False
         
-        # Penanganan kasus string "-0" yang di float jadi 0
         if val == 0 and isinstance(value, str) and value.strip().lstrip('+').lstrip('-').strip() == "0" and value.strip().startswith("-"):
              return False
 
@@ -116,12 +115,8 @@ def is_valid_password(password):
     """
     if not isinstance(password, str):
         return False, "Password harus berupa string."
-
-    # 1. Minimal 6 karakter
     if len(password) < 6:
         return False, "Password minimal 6 karakter."
-
-    # 2. Mengandung setidaknya satu huruf besar
     if not re.search(r'[A-Z]', password):
         return False, "Password harus mengandung minimal satu huruf besar (A-Z)."
 
@@ -131,8 +126,6 @@ def validate_karyawan_input(data, required_fields=[]):
         nama = str(data.get("nama", "")).strip()
         jabatan = str(data.get("jabatan", "")).strip().capitalize()
         gaji_input = data.get("gaji", 0)
-
-        # Cek field wajib (nama, jabatan, username, password)
         is_valid, msg = validate_fields(data, required_fields) 
         if not is_valid:
             return False, msg

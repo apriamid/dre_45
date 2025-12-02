@@ -20,44 +20,15 @@ function loadLaporanProfit(){
     $$("laporan_wrapper").setHTML("<h2>Laporan Belum Diimplementasikan</h2><p>Panggil API untuk data laporan profit.</p>");
 }
 
-function generateKodeClient(kategori){
-    console.log("Fungsi generateKodeClient dipanggil.");
-    const prefix = (kategori || "MISC").substring(0, 3).toUpperCase();
-    return prefix + Date.now().toString().slice(-4);
-}
 
-// =====================================================================================================
-//                                    HELPER FUNCTION VALIDASI PASSWORD
-// =====================================================================================================
-function validatePassword(password) {
-    // Kriteria: Minimal 8 char, 1 huruf besar, 1 huruf kecil, 1 angka, 1 simbol (@$!%*?&), tanpa spasi
-    const minLength = 8;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasDigit = /\d/.test(password);
-    const hasSpecialChar = /[@$!%*?&]/.test(password);
-    const hasNoSpace = !/\s/.test(password);
+var localCounter = {};
 
-    if (password.length < minLength) {
-        return { valid: false, message: "Minimal 8 karakter." };
-    }
-    if (!hasUpperCase) {
-        return { valid: false, message: "Harus mengandung 1 huruf besar (A-Z)." };
-    }
-    if (!hasLowerCase) {
-        return { valid: false, message: "Harus mengandung 1 huruf kecil (a-z)." };
-    }
-    if (!hasDigit) {
-        return { valid: false, message: "Harus mengandung 1 angka (0-9)." };
-    }
-    if (!hasSpecialChar) {
-        return { valid: false, message: "Harus mengandung 1 simbol khusus (@$!%*?&)." };
-    }
-    if (!hasNoSpace) {
-        return { valid: false, message: "Tidak boleh mengandung spasi." };
-    }
+function generateKodeClient(kategori) {
+    let prefix = (kategori || "XXX").substring(0, 3).toUpperCase();
 
-    return { valid: true, message: null };
+    if (!localCounter[prefix]) localCounter[prefix] = 0;
+    localCounter[prefix]++;
+    return prefix + String(localCounter[prefix]).padStart(3, "0");
 }
 
 
@@ -224,14 +195,14 @@ webix.ready(function() {
                 { id:"jabatan", header:"Jabatan", width:150 },
                 { id:"gaji", header:"Gaji", width:100, template:function(obj){ return obj.gaji ? new Intl.NumberFormat('id-ID').format(obj.gaji) : 0; } },
                 { id:"status_aktif", header:"Status", width:100, template:function(obj){ return obj.status_aktif ? "Aktif" : "Nonaktif"; } },
-                { id:"tanggal_dibuat", header:"Dibuat", width:160, template:function(obj){ return obj.tanggal_dibuat ? new Date(obj.tanggal_dibuat).toLocaleString() : ""; } }
+                { id:"tanggal_dibuat", header:"Dibuat", width:200, template:function(obj){ return obj.tanggal_dibuat ? new Date(obj.tanggal_dibuat).toLocaleString() : ""; } }
               ], !isReadOnly("karyawan")),
               createCrudTable("produk", "/api/produk", [
                 {id:"id",header:"kode produk",width:120},
                 { id:"nama_produk", header:"Nama Produk", fillspace:true },
                 { id:"kategori", header:"Kategori", width:150 },
                 { id:"stok", header:"Stok", width:80 },
-                { id:"harga_jual", header:"Harga", width:120, template:function(obj){ return obj.harga ? new Intl.NumberFormat('id-ID').format(obj.harga) : 0; } }
+                { id:"harga_jual", header:"Harga", width:120, template:function(obj){ return obj.harga_jual ? new Intl.NumberFormat('id-ID').format(obj.harga_jual) : 0; } }
               ], true),
              
               { id:"transaksi_pembelian", batch:"transaksi_pembelian", rows:[
@@ -321,11 +292,44 @@ webix.ready(function() {
       { view:"text", type:"password", name:"password", label:"Password",required:true }
     ],
     produk:[
-      { view:"text", name:"nama_produk", label:"Nama Produk",required:true },
-      { view:"text", name:"kategori", label:"Kategori",required:true },
-      { view:"text", name:"stok", label:"Stok",required:true },
-      { view:"text", name:"harga", label:"Harga",required:true}
-    ],
+    { view:"text", name:"nama_produk", label:"Nama Produk",required:true, on:{
+      onBlur: function(){
+        var nama = this.getValue().trim();
+        if(nama){
+          webix.ajax("/api/produk?nama=" + encodeURIComponent(nama)) 
+          .then(function(res){
+            var data = res.json();
+            var form = $$("form_produk");
+            if(data && data.length > 0){
+              var existing = data[0]; 
+
+              form.setValues({
+                kategori: existing.kategori || "", 
+                harga_jual: existing.harga_jual || 0,
+                stok: existing.stok || 0 
+              }, true); 
+              $$("form_produk").elements.kategori.disable(); 
+              $$("form_produk").elements.harga_jual.disable(); 
+
+              webix.message("Produk ditemukan, Kategori dan Harga diisi otomatis.");
+            } else {
+              $$("form_produk").elements.kategori.enable(); 
+              $$("form_produk").elements.harga_jual.enable(); 
+              form.setValues({kategori: "", harga_jual: 0}, true);
+            }
+          })
+          .catch(function(err){
+            console.error("Gagal cek produk:", err);
+            $$("form_produk").elements.kategori.enable(); 
+            $$("form_produk").elements.harga_jual.enable(); 
+          });
+        }
+      }
+    }},
+    { view:"text", name:"kategori", label:"Kategori",required:true, id:"produk_kategori_input" }, 
+    { view:"text", name:"stok", label:"Stok",required:true },
+    { view:"text", name:"harga_jual", label:"Harga Jual",required:true, id:"produk_harga_jual_input" } 
+  ],
     
   };
   
@@ -473,41 +477,71 @@ webix.ready(function() {
             { template:"<hr>", type:"clean", height:10 },
             { template:"<b>Daftar Item</b>", type:"clean", css:"webix_strong" },
             { view:"datatable", id:"table_items", editable:true, scroll:"x", select:"row",
-              columns:[
-                { id:"no", header:"No", width:50, template:function(obj, common, value, col, index){ return index+1; }, css:"text-center" },
-                { id:"nama_produk", header:"Nama Produk", editor:"text", fillspace:true, minWidth:200, css:{"text-align":"left"} ,required:true},
-                { id:"kategori_produk", header:"Kategori", editor:"text", width:140, css:{"text-align":"left"},requiered:true },
-                { id:"kode_produk", header:"Kode Produk", width:120, css:{"text-align":"center"} },
-                { id:"jumlah", header:"Jumlah", editor:"text", width:100, css:{"text-align":"center"} },
-                { id:"harga_beli", header:"Harga Beli", editor:"text", width:140, css:{"text-align":"right"}, template:o=>formatRupiah(parseInt(o.harga_beli)||0) },
-                { id:"total", header:"total", width:150, css:{"text-align":"right"}, template:o=>formatRupiah((parseInt(o.jumlah)||0)*(parseInt(o.harga_beli)||0)) }
-              ],
+            columns:[
+              { id:"no", header:"No", width:50, template:function(obj, common, value, col, index){ return index+1; }, css:"text-center" },
+              { id:"nama_produk", header:"Nama Produk", editor:"text", fillspace:true, minWidth:200, css:{"text-align":"left"} ,required:true},
+              { id:"kategori_produk", header:"Kategori", editor:"text", width:140, css:{"text-align":"left"}, required:true },
+              { id:"kode_produk", header:"Kode Produk", width:120, css:{"text-align":"center", "background":"#f4f4f4"} },
+              { id:"jumlah", header:"Jumlah", editor:"text", width:100, css:{"text-align":"center"} },
+              { id:"harga_beli", header:"Harga Beli", editor:"text", width:140, css:{"text-align":"right"}, template:o=>formatRupiah(parseInt(o.harga_beli)||0) },
+              { id:"total", header:"total", width:150, css:{"text-align":"right"}, template:o=>formatRupiah((parseInt(o.jumlah)||0)*(parseInt(o.harga_beli)||0)) }
+            ],
               height:320, data:[], css:"webix_header_border webix_data_border",
               on:{
-                onAfterEditStop:function(state, editor){
-                  var t=this;
-                  var id = editor.row;
-                  var item = t.getItem(id) || {};
-                  item.jumlah = parseInt(item.jumlah) || 0;
-                  item.harga_beli = parseInt(item.harga_beli) || 0;
-                  item.subtotal = item.jumlah * item.harga_beli;
-                  if(editor.column === "kategori_produk"){
-                    if(/\d/.test(item.kategori_produk || "")){
-                      webix.message({type:"error", text:"Kategori tidak boleh mengandung angka!"});
-                      item.kategori_produk = "";
-                      item.kode_produk = "";
-                      t.updateItem(id, item);
-                      return;
-                    }
-                    if(!item.kode_produk && item.kategori_produk){
-                        item.kode_produk = generateKodeClient(item.kategori_produk);
-                    }
-                  }
+    onAfterEditStop:function(state, editor){
+      var t = this;
+      var id = editor.row;
+      var item = t.getItem(id) || {};
+      if(editor.column === "nama_produk" && state.value !== state.old){
+         var namaInput = (state.value || "").trim();
+         if(namaInput){
+             webix.ajax("/api/produk?nama=" + encodeURIComponent(namaInput))
+             .then(function(res){
+                 var data = res.json();
+                 if(data && data.length > 0){
+                     var existing = data[0];
+                     if(existing.nama_produk.toLowerCase() === namaInput.toLowerCase()){
+                         item.kategori_produk = existing.kategori;
+                         item.kode_produk = existing._id || existing.id;
+                         item.harga_beli = existing.harga_beli || 0; 
+                         
+                         webix.message({type:"success", text:"Produk terdaftar ditemukan. Data dilengkapi."});
+                         t.updateItem(id, item);
+                         t.refresh(id);
+                     }
+                 }
+             });
+         }
+      }
 
-                  t.updateItem(id, item);
-                }
-              }
-            },
+      item.jumlah = parseInt(item.jumlah) || 0;
+      item.harga_beli = parseInt(item.harga_beli) || 0;
+      item.subtotal = item.jumlah * item.harga_beli;
+      if(editor.column === "kategori_produk"){
+        if(/\d/.test(item.kategori_produk || "")){
+          webix.message({type:"error", text:"Kategori tidak boleh mengandung angka!"});
+          item.kategori_produk = "";
+          t.updateItem(id, item);
+          return;
+        }
+      }
+      // AUTO GENERATE KODE PRODUK SAAT USER INPUT KATEGORI
+      if (editor.column === "kategori_produk") {
+          if (item.kategori_produk && !item.kode_produk) {
+              item.kode_produk = generateKodeClient(item.kategori_produk);
+              webix.message("Kode Produk Dibuat: " + item.kode_produk);
+          }
+          t.updateItem(id, item);
+      }
+
+
+
+      t.updateItem(id, item);
+    }
+  }
+},
+
+
             { margin:10, cols:[
               { view:"button", value:"Tambah", click:function(){ $$("table_items").add({}); } },
               { view:"button", value:"Hapus", css:"webix_danger", click:function(){
@@ -787,7 +821,7 @@ webix.ui({
       tbl.on_click["editBtn"] = function(e, id) {
           const tr = this.getItem(id);
           if (!tr) return false;
-          $$("detail_supplier").setHTML("Transaksi: <b>" + (tr._id || "-") + "</b>"); // Diubah untuk menampilkan ID Transaksi
+          $$("detail_supplier").setHTML("Transaksi: <b>" + (tr._id || "-") + "</b>"); 
           $$("detail_items").clearAll();
           if (Array.isArray(tr.daftar_item)) {
               var items = tr.daftar_item.map(function(x){
