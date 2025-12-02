@@ -4,7 +4,7 @@ from bson import ObjectId
 import bcrypt
 
 from common.mongo_connection import MongoConnection
-from common.validasi_sanitasi import validate_karyawan_input
+from common.validasi_sanitasi import validate_karyawan_input,is_valid_password
 from common.id_generator import generate_karyawan_id
 from config import (
     MONGODB_CONNECTION_STRING,
@@ -54,27 +54,11 @@ def get_all_karyawan():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
-
-# =======================================================================
-#                               CREATE 
-# =======================================================================
 @karyawan_bp.route("", methods=["POST"])
 def add_karyawan():
     """
     Menambahkan karyawan baru beserta akun user opsional.
-
-    Validasi:
-        - Data divalidasi menggunakan validate_karyawan_input().
-        - Admin tidak boleh membuat user dengan jabatan Admin.
-        - Username harus unik bila ditambahkan akun user.
-
-    Fitur:
-        - Generate ID otomatis (berdasarkan jabatan).
-        - Hash password menggunakan bcrypt.
-        - Menyimpan karyawan & user (jika ada username + password).
-
-    Returns:
-        tuple: JSON hasil pembuatan karyawan dan status HTTP.
+    ... [Dokumentasi dan logika validasi input/role lainnya tetap sama] ...
     """
     try:
         data = request.get_json(force=True)
@@ -108,7 +92,13 @@ def add_karyawan():
         password = data.get("password")
 
         if username and password:
+            is_valid, msg = is_valid_password(password)
+            if not is_valid:
+                mongo.db[MONGODB_COLLECTION_KARYAWAN].delete_one({"_id": new_id}) 
+                return jsonify({"success": False, "message": msg}), 400
+            
             if mongo.db[MONGODB_COLLECTION_USER].find_one({"username": username}):
+                mongo.db[MONGODB_COLLECTION_KARYAWAN].delete_one({"_id": new_id}) 
                 return jsonify({"success": False, "message": "Username sudah digunakan"}), 400
 
             hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
@@ -126,29 +116,14 @@ def add_karyawan():
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-
-
 # ==========================================================
-# UPDATE
+#                       UPDATE
 # ==========================================================
 @karyawan_bp.route("/<string:kid>", methods=["PUT"])
 def update_karyawan(kid):
     """
     Memperbarui data karyawan dan role user terkait.
-    Validasi:
-        - Tidak boleh memperbarui karyawan yang tidak ada.
-        - Admin tidak boleh mengubah data sesama Admin.
-        - Admin tidak boleh mengubah jabatan seseorang menjadi Admin.
-
-    Proses:
-        - Validasi input.
-        - Update karyawan berdasarkan _id.
-        - Update koleksi user (role user disesuaikan jabatan baru).
-    Args:
-        kid (str): ID karyawan (ex: K001)
-
-    Returns:
-        tuple: JSON pesan sukses/gagal.
+    ... [Dokumentasi dan logika validasi input/role lainnya tetap sama] ...
     """
     try:
         data = request.get_json(force=True)
@@ -171,11 +146,25 @@ def update_karyawan(kid):
                 return jsonify({"success": False, "message": "Admin tidak dapat mengubah data sesama Admin"}), 403
             if jabatan_baru == "Admin":
                 return jsonify({"success": False, "message": "Admin tidak dapat mengubah jabatan menjadi Admin"}), 403
+       
+        password = data.get("password")
+        if password:
+            is_valid, msg = is_valid_password(password)
+            if not is_valid:
+                return jsonify({"success": False, "message": msg}), 400
+            
+            hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+            mongo.db[MONGODB_COLLECTION_USER].update_one(
+                {"id_karyawan": kid},
+                {"$set": {"password": hashed_pw}}
+            )
 
         clean["tanggal_diperbarui"] = datetime.utcnow()
 
         mongo.db[MONGODB_COLLECTION_KARYAWAN].update_one({"_id": kid}, {"$set": clean})
 
+        # Update role user (jika jabatan berubah)
         mongo.db[MONGODB_COLLECTION_USER].update_one(
             {"id_karyawan": kid},
             {"$set": {"role": jabatan_baru.lower()}}

@@ -7,89 +7,7 @@
   <link rel="stylesheet" href="https://cdn.webix.com/edge/webix.css" />
   <script src="https://cdn.webix.com/edge/webix.js"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
-
-  <style>
-    :root{
-      --bg: #f6f8f7;
-      --card: #ffffff;
-      --brand: #0b615b;
-      --accent: #1e8f85;
-      --muted: #6b776f;
-      --shadow: rgba(11,97,91,0.06);
-    }
-    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;color:#14201e;background:var(--bg);}
-    .layout-root{height:100vh; display:flex; overflow:hidden;}
-    .sidebar{
-      width:220px;
-      background:linear-gradient(180deg,var(--brand),#0e6f63);
-      color:#fff;
-      display:flex;
-      flex-direction:column;
-      padding:18px 14px;
-      box-shadow: 2px 0 14px rgba(0,0,0,0.04);
-    }
-    .brand{font-weight:800;font-size:18px;display:flex;align-items:center;gap:10px;margin-bottom:18px}
-    .nav-item{padding:10px 8px;border-radius:8px;display:flex;align-items:center;gap:10px;cursor:pointer;color:#f3fff8}
-    .nav-item:hover{background:rgba(255,255,255,0.04)}
-    .nav-item.active{background:rgba(255,255,255,0.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03)}
-    .nav-bottom{margin-top:auto}
-    .content{flex:1;display:flex;flex-direction:column;overflow:auto;padding:18px 20px;}
-
-    /* ========== HEADER ========== */
-    .topbar{height:64px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:transparent;margin-bottom:12px}
-    .title{font-size:20px;font-weight:700;color:var(--brand)}
-    .search-wrap{display:flex;gap:10px;align-items:center}
-
-    /* ========== PRODUCT CARD ========== */
-    .prod-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(240px,1fr));gap:12px}
-    .prod-card{
-      background:var(--card);
-      border-radius:12px;
-      padding:14px;
-      box-shadow: 0 8px 20px var(--shadow);
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      cursor:pointer;
-      transition:transform .12s ease, box-shadow .12s ease;
-      min-height:120px;
-    }
-    .prod-card:hover{transform:translateY(-6px);box-shadow:0 20px 40px rgba(0,0,0,0.08)}
-    .prod-title{font-weight:700;font-size:15px;color:#0f1f1e}
-    .prod-meta{font-size:12px;color:var(--muted)}
-    .prod-footer{display:flex;justify-content:space-between;align-items:center}
-    .badge{background:#e7f5f4;color:var(--brand);padding:4px 8px;border-radius:8px;font-weight:600;font-size:12px}
-
-    /* ========== RIGHT PANEL (CART) ========== */
-    .right-panel{width:420px;display:flex;flex-direction:column;gap:12px}
-    .trx-box{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px var(--shadow)}
-    .cart-table{background:var(--card);border-radius:10px;padding:8px;box-shadow:0 6px 18px var(--shadow);overflow:auto}
-    .cart-footer{display:flex;justify-content:space-between;align-items:center;padding:12px 6px}
-    .btn-primary{background:var(--brand);color:#fff;border:none;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer}
-    .btn-secondary{background:#f3f7f6;border:1px solid #e6efee;padding:8px 10px;border-radius:8px;cursor:pointer}
-    .val-large{font-weight:800;font-size:20px;color:#0f1f1e}
-
-    /* ========== DATA TABLE STYLES ========== */
-    .table { width:100%; border-collapse:collapse; }
-    .table th, .table td { padding:10px 8px; border-bottom:1px solid #f0f3f2; font-size:14px; text-align:left; }
-    .table th { font-weight:700; background:#fafaf9; color:#22302d; font-size:13px; }
-    .text-right{ text-align:right !important; }
-    .text-center{ text-align:center !important; }
-    .trash-action{color:#c0392b;cursor:pointer;font-size:16px;padding:6px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center}
-    .btn-struk{display:inline-block;padding:6px 10px;border-radius:6px;background:#eef7f6;border:1px solid #d9f0ee;color:var(--brand);font-weight:700;cursor:pointer}
-
-    /* ========== HISTORY LAYOUT ========== */
-    .history-wrap{background:var(--card);padding:12px;border-radius:10px;box-shadow:0 6px 18px var(--shadow);}
-
-    /* ========== RESPONSIVE ========== */
-    @media(max-width:1100px){
-      .layout-root{flex-direction:column}
-      .sidebar{width:100%;flex-direction:row;gap:12px;overflow:auto;padding:10px}
-      .right-panel{width:100%}
-      .content{padding:12px}
-      .prod-grid{grid-template-columns:repeat(auto-fill, minmax(180px,1fr))}
-    }
-  </style>
+  <link rel="stylesheet" href="/static/sistemkasir.css">
 </head>
 <body>
   <div class="layout-root">
@@ -197,11 +115,7 @@
     const historySection = document.getElementById('historySection');
     const historyBody = document.getElementById('historyBody');
     const pageTitle = document.getElementById('pageTitle');
-    
-    // VARIABEL BARU UNTUK KONTEN POS
     const posSection = document.getElementById('posSection');
-
-
     async function loadProducts(){
       try{
         const res = await fetch('/api/produk');
@@ -231,7 +145,11 @@
       }
       list.forEach(p=>{
         const el = document.createElement('div');
-        el.className = 'prod-card';
+       el.className = 'prod-card';
+        if(p.stok <= 0){
+          el.style.opacity = "0.5";
+          el.style.pointerEvents = "none";
+        }
         el.innerHTML = `
           <div>
             <div class="prod-title">${escapeHtml(p.nama_produk)}</div>
@@ -256,18 +174,43 @@
     document.getElementById('refreshBtn').addEventListener('click', ()=> loadProducts());
 
     function addToCart(p, qty){
-      if(!p) return;
-      const kode = p._id;
-      let found = CART.find(c=>c.kode_produk===kode);
-      qty = Number(qty)||1;
-      if(found){
-        found.qty = Number(found.qty||0) + qty;
-        found.subtotal = found.qty * found.harga;
-      } else {
-        CART.push({ kode_produk: kode, nama_produk: p.nama_produk, harga: Number(p.harga)||0, qty: qty, subtotal: (Number(p.harga)||0)*qty });
-      }
-      refreshCartTable();
+  if(!p) return;
+  if (Number(p.stok) <= 0){
+    alert('Stok produk ini habis dan tidak bisa dijual.');
+    return;
+  }
+  const kode = p._id;
+  let found = CART.find(c=>c.kode_produk===kode);
+  qty = Number(qty) || 1;
+  if(found){
+    const newQty = found.qty + qty;
+
+    if(newQty > p.stok){
+      alert('Qty melebihi stok! Stok tersedia: ' + p.stok);
+      return;
     }
+    found.qty = newQty;
+    found.subtotal = found.qty * found.harga;
+  }
+  else{
+    if(qty > p.stok){
+      alert('Qty melebihi stok! Stok tersedia: ' + p.stok);
+      return;
+    }
+
+    CART.push({
+      kode_produk: kode,
+      nama_produk: p.nama_produk,
+      harga: Number(p.harga)||0,
+      qty: qty,
+      subtotal: qty * Number(p.harga||0),
+      stok: p.stok     
+    });
+  }
+
+  refreshCartTable();
+}
+
 
     function refreshCartTable(){
       cartBody.innerHTML = '';
@@ -293,19 +236,32 @@
         inp.addEventListener('change', onQtyChange);
       });
     }
-    function onQtyChange(e){
-      const idx = Number(this.dataset.idx);
-      const val = numberOnly(this.value);
-      if(Number.isNaN(idx)) return;
-      if(val <= 0){
-        this.value = 1;
-        CART[idx].qty = 1;
-      } else {
-        CART[idx].qty = val;
-      }
-      CART[idx].subtotal = CART[idx].qty * CART[idx].harga;
-      refreshCartTable();
-    }
+   function onQtyChange(e){
+  const idx = Number(this.dataset.idx);
+  const val = numberOnly(this.value);
+
+  if(Number.isNaN(idx)) return;
+
+  const stokMax = CART[idx].stok || 0;
+
+  if(val <= 0){
+    alert("Qty tidak boleh 0 atau negatif");
+    this.value = 1;
+    CART[idx].qty = 1;
+  }
+  else if(val > stokMax){
+    alert("Qty melebihi stok! Stok tersedia: " + stokMax);
+    this.value = stokMax;
+    CART[idx].qty = stokMax;
+  }
+  else{
+    CART[idx].qty = val;
+  }
+
+  CART[idx].subtotal = CART[idx].qty * CART[idx].harga;
+  refreshCartTable();
+}
+
 
     function attachTrashListeners(){
       document.querySelectorAll('.trash-action').forEach(btn=>{

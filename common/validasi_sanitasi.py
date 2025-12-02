@@ -53,23 +53,13 @@ def is_valid_email_gmail(email):
 
 def is_valid_number_positive(value):
     """Memastikan value adalah angka >= 0 dan bukan string negatif seperti "-0"."""
-    if isinstance(value, str) and value.strip().startswith("-") and not value.strip() == "0":
-        # Block string negatif eksplisit, termasuk "-0"
-        # Namun, kita harus berhati-hati agar tidak memblokir nilai numerik negatif
-        # jika itu berasal dari konversi (misal float(-0) => 0.0)
-        # Cara yang lebih aman: coba konversi, lalu cek apakah string asli mengandung '-'
-        pass 
-
     try:
         val = float(value)
-        # 1. Nilai numerik harus >= 0
-        # 2. Jika nilai == 0, pastikan string asli BUKAN "-0" atau sejenisnya
         if val < 0:
             return False
         
-        # Cek jika input adalah string -0
+        # Penanganan kasus string "-0" yang di float jadi 0
         if val == 0 and isinstance(value, str) and value.strip().lstrip('+').lstrip('-').strip() == "0" and value.strip().startswith("-"):
-             # untuk menangani kasus seperti "-0", "-0.0", "-000"
              return False
 
         return True
@@ -111,145 +101,112 @@ def normalize_for_client(doc):
         if "id" not in new:
             new["id"] = str(_id)
     return new
+
 # ========================================================================
-#                          VALIDASI SPESIFIK
+#                    VALIDASI KHUSUS (TERMASUK PASSWORD)
 # ========================================================================
 
-def validate_karyawan_input(data):
+def is_valid_password(password):
+    """
+    Memvalidasi password sesuai ketentuan:
+    - Minimal 6 karakter.
+    - Mengandung setidaknya satu huruf besar (A–Z).
+    
+    Returns: (bool, str) -> (valid_status, message)
+    """
+    if not isinstance(password, str):
+        return False, "Password harus berupa string."
+
+    # 1. Minimal 6 karakter
+    if len(password) < 6:
+        return False, "Password minimal 6 karakter."
+
+    # 2. Mengandung setidaknya satu huruf besar
+    if not re.search(r'[A-Z]', password):
+        return False, "Password harus mengandung minimal satu huruf besar (A-Z)."
+
+    return True, "Valid"
+def validate_karyawan_input(data, required_fields=[]):
     try:
         nama = str(data.get("nama", "")).strip()
         jabatan = str(data.get("jabatan", "")).strip().capitalize()
-        gaji_input = data.get("gaji", 0) # Menggunakan gaji_input sebagai string/input mentah
+        gaji_input = data.get("gaji", 0)
+
+        # Cek field wajib (nama, jabatan, username, password)
+        is_valid, msg = validate_fields(data, required_fields) 
+        if not is_valid:
+            return False, msg
 
         if not nama or not jabatan:
             return False, "Nama dan jabatan wajib diisi"
+        if jabatan not in ["Admin", "Kasir", "Superadmin"]:
+            return False, "Jabatan hanya boleh 'Admin', 'Kasir', atau 'Superadmin'"
 
-        if jabatan not in ["Admin", "Kasir"]:
-            return False, "Jabatan hanya boleh 'Admin' atau 'Kasir'"
-
-        # Cek apakah input gaji adalah string negatif dari nol (misal "-0")
+    
         if isinstance(gaji_input, str) and gaji_input.strip().lstrip('+').lstrip('-').strip() == "0" and gaji_input.strip().startswith("-"):
-            return False, "Gaji harus berupa angka non-negatif" # Tambahkan validasi eksplisit
-
+            return False, "Gaji harus berupa angka non-negatif"
         try:
             gaji = float(gaji_input)
             if gaji < 0:
                 return False, "Gaji tidak boleh negatif"
         except ValueError:
             return False, "Gaji harus berupa angka"
-
+            
         clean = {
             "nama": nama,
             "jabatan": jabatan,
-            "gaji": gaji
+            "gaji": gaji,
+            "telepon": str(data.get("telepon", "")).strip(),
+            "alamat": str(data.get("alamat", "")).strip()
         }
-
         return True, clean
-
     except Exception as e:
         return False, f"Kesalahan validasi: {str(e)}"
-
-
-# ---------- PRODUK ----------
+    
 def validate_produk_input(data):
     data = sanitize_dict(data)
     nama = data.get("nama_produk", "")
     kategori = data.get("kategori", "")
-    stok_input = data.get("stok", 0) # Input mentah
-    harga_input = data.get("harga", 0) # Input mentah
+    stok_input = data.get("stok", 0)
+    harga_beli_input = data.get("harga_beli", 0)
+    harga_jual_input = data.get("harga_jual", 0)
 
-    if not is_valid_string(nama):
-        return False, "Nama produk hanya boleh huruf dan spasi."
-    if not is_valid_string(kategori):
-        return False, "Kategori hanya boleh huruf dan spasi."
+    if not nama or not kategori:
+        return False, "Nama produk dan kategori wajib diisi."
     
     # Validasi Stok
-    if isinstance(stok_input, str) and stok_input.strip().lstrip('+').lstrip('-').strip() == "0" and stok_input.strip().startswith("-"):
-        return False, "Stok harus berupa integer positif." # Tambahkan validasi eksplisit
+    if not is_valid_number_positive(stok_input):
+        return False, "Stok harus berupa angka non-negatif."
+    
+    # Validasi Harga Beli
+    if not is_valid_number_positive(harga_beli_input):
+        return False, "Harga beli harus berupa angka non-negatif."
+    
+    # Validasi Harga Jual
+    if not is_valid_number_positive(harga_jual_input):
+        return False, "Harga jual harus berupa angka non-negatif."
+
     try:
-        stok = int(stok_input)
-        if stok < 0:
-            raise ValueError()
+        clean = {
+            "nama_produk": nama,
+            "kategori": kategori,
+            "stok": int(float(stok_input)),
+            "harga_beli": float(harga_beli_input),
+            "harga_jual": float(harga_jual_input),
+            "deskripsi": data.get("deskripsi", ""),
+            "status": str(data.get("status", "aktif")).lower()
+        }
     except Exception:
-        return False, "Stok harus berupa integer positif."
+        return False, "Terjadi kesalahan saat mengkonversi data numerik."
 
-    # Validasi Harga
-    if isinstance(harga_input, str) and harga_input.strip().lstrip('+').lstrip('-').strip() == "0" and harga_input.strip().startswith("-"):
-        return False, "Harga harus angka non-negatif (>= 0)." # Tambahkan validasi eksplisit
+    return True, clean
 
-    if not is_valid_number_positive(harga_input):
-        return False, "Harga harus angka non-negatif (>= 0)."
+# ========================================================================
+#                          HELPER ID GENERATOR (ASUMSI ADA DI SINI)
+# ========================================================================
 
-    data["stok"] = stok
-    data["harga"] = float(harga_input)
-    return True, data
-
-
-# ---------- SUPPLIER ----------
-def validate_supplier_input(data):
-    data = sanitize_dict(data)
-    nama = data.get("nama_supplier", "")
-    telp = data.get("no_telp", "")
-    alamat = data.get("alamat", "")
-    email = data.get("email", "")
-
-    if not is_valid_string(nama):
-        return False, "Nama supplier hanya boleh huruf dan spasi."
-    if not is_valid_phone(telp):
-        return False, "Nomor telepon hanya boleh angka."
-    if not is_valid_email_gmail(email):
-        return False, "Email harus berakhiran @gmail.com."
-
-    return True, data
-
-
-# ---------- PEMBELIAN ----------
-def validate_pembelian_input(data):
-    data = sanitize_dict(data)
-    status = str(data.get("status", "")).strip().lower()
-    items = data.get("items", [])
-    total_beli = data.get("total_beli", 0)
-
-    if status not in ["selesai", "ditunda"]:
-        return False, "Status hanya boleh 'selesai' atau 'ditunda'."
-
-    if not isinstance(items, list) or len(items) == 0:
-        return False, "List barang (items) wajib berupa array dan tidak boleh kosong."
-
-    total_calc = 0.0
-    for idx, it in enumerate(items):
-        try:
-            qty = int(float(it.get("qty", 0)))
-            harga_beli = float(it.get("harga_beli", 0))
-            if qty < 0 or harga_beli < 0:
-                raise ValueError()
-            total_calc += qty * harga_beli
-        except Exception:
-            return False, f"Item ke-{idx+1}: qty dan harga_beli harus angka >= 0."
-
-    # Jika total dikirim, cek valid
-    try:
-        if float(total_beli) < 0:
-            return False, "Total pembelian tidak boleh negatif."
-    except Exception:
-        return False, "Total pembelian harus berupa angka."
-
-    data["total_beli"] = total_calc
-    data["status"] = status
-    data["tanggal"] = datetime.utcnow()
-    return True, data
-
-
-# ======================================================
-#  HELPER UNTUK VALIDASI ID
-# ======================================================
-def _zero_pad_num(n, width=3):
-    return str(n).zfill(width)
-
-
-def _extract_number_from_id(id_str):
-    m = re.search(r'(\d+)$', str(id_str))
-    return int(m.group(1)) if m else 0
+def _zero_pad_num(num, length=3):
+    return str(num).zfill(length)
 
 
 def get_next_numeric_suffix_for_prefix(mongo, collection_name, id_field, prefix):

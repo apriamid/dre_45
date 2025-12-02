@@ -27,6 +27,41 @@ function generateKodeClient(kategori){
 }
 
 // =====================================================================================================
+//                                    HELPER FUNCTION VALIDASI PASSWORD
+// =====================================================================================================
+function validatePassword(password) {
+    // Kriteria: Minimal 8 char, 1 huruf besar, 1 huruf kecil, 1 angka, 1 simbol (@$!%*?&), tanpa spasi
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasDigit = /\d/.test(password);
+    const hasSpecialChar = /[@$!%*?&]/.test(password);
+    const hasNoSpace = !/\s/.test(password);
+
+    if (password.length < minLength) {
+        return { valid: false, message: "Minimal 8 karakter." };
+    }
+    if (!hasUpperCase) {
+        return { valid: false, message: "Harus mengandung 1 huruf besar (A-Z)." };
+    }
+    if (!hasLowerCase) {
+        return { valid: false, message: "Harus mengandung 1 huruf kecil (a-z)." };
+    }
+    if (!hasDigit) {
+        return { valid: false, message: "Harus mengandung 1 angka (0-9)." };
+    }
+    if (!hasSpecialChar) {
+        return { valid: false, message: "Harus mengandung 1 simbol khusus (@$!%*?&)." };
+    }
+    if (!hasNoSpace) {
+        return { valid: false, message: "Tidak boleh mengandung spasi." };
+    }
+
+    return { valid: true, message: null };
+}
+
+
+// =====================================================================================================
 //                                    HELPER FUNCTION FORMAT RUPIAH
 // =====================================================================================================
 function formatRupiah(angka){

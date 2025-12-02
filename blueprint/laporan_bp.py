@@ -128,7 +128,7 @@ def tren_transaksi():
 
 
 # ======================================================
-#                          PROFIT (LAMA)
+#                          PROFIT 
 # ======================================================
 @laporan_bp.route("/profit", methods=["GET"])
 def get_laporan_profit():

@@ -25,16 +25,32 @@
     <p id="login-message" class="mt-3 text-center"></p>
   </div>
   <script>
-    document.getElementById("loginForm").addEventListener("submit", async function(event) {
-      event.preventDefault();
-      
-      const user = document.getElementById("username").value.trim();
-      const pass = document.getElementById("password").value.trim();
-      const msg  = document.getElementById("login-message");
-      msg.textContent = "Memproses...";
-      msg.style.color = "gray";
+    function validatePassword(password) {
+        if (password.length < 6)
+            return "Password minimal 6 karakter.";
+        if (/\s/.test(password))
+            return "Password tidak boleh mengandung spasi.";
+        return "Valid";
+    }
 
-      try {
+    document.getElementById("loginForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+    
+    const user = document.getElementById("username").value.trim();
+    const pass = document.getElementById("password").value;
+    const msg = document.getElementById("login-message");
+
+    const validationMessage = validatePassword(pass);
+    if (validationMessage !== "Valid") {
+        msg.textContent = validationMessage;
+        msg.style.color = "red";
+        return; 
+    }
+    
+    msg.textContent = "Memproses...";
+    msg.style.color = "gray";
+
+    try {
         const res = await fetch("/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -45,9 +61,9 @@
         if (res.ok && result.success) {
           msg.textContent = "Login berhasil!";
           msg.style.color = "green";
-          localStorage.setItem("username", result.username);
-          localStorage.setItem("role", result.role);
-          localStorage.setItem("id_karyawan", result.id_karyawan); 
+          // localStorage.setItem("username", result.username);
+          // localStorage.setItem("role", result.role);
+          // localStorage.setItem("id_karyawan", result.id_karyawan); 
           if (result.role === "admin" || result.role === "superadmin")
             window.location.href = "/admin-dashboard";
           else if (result.role === "kasir")

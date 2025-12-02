@@ -49,6 +49,5 @@ class Loginaja:
             resp = make_response(redirect(url_for("login")))
             resp.delete_cookie("token", path="/")
             return resp
-
         g.user = session_data
         return None

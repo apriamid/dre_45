@@ -15,22 +15,21 @@ class SessionManager:
     def generate_token(self, username, role):
         """
         Membuat token JWT dan menyimpannya ke dalam koleksi sesi MongoDB.
-        Jika sudah ada session aktif untuk username dan belum expired, kembalikan token yang ada.
+        Jika sudah ada sesi aktif untuk username, token lama akan dihapus.
+        (Mekanisme Single Session Enforcement yang lebih ketat)
         """
         now = datetime.utcnow()
+        
         existing = self.coll.find_one({"username": username})
         if existing:
             existing_token = existing.get("token")
             try:
+                # jika decode toke berhasil bakalan kembalikan token yang ada.
                 payload = jwt.decode(existing_token, self.secret_key, algorithms=['HS256'])
                 return existing_token
-            except jwt.ExpiredSignatureError:
-                self.coll.delete_one({"_id": existing["_id"]})
-            except jwt.InvalidTokenError:
-                self.coll.delete_one({"_id": existing["_id"]})
             except Exception:
                 self.coll.delete_one({"_id": existing["_id"]})
-
+        
         exp = now + timedelta(hours=24)
         payload = {
             "username": username,

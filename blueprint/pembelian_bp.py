@@ -4,7 +4,7 @@ from bson import ObjectId
 import re
 
 from common.mongo_connection import MongoConnection
-from config import * # Diasumsikan MONGODB_COLLECTION_PRODUCT, MONGODB_COLLECTION_STOK, dll. ada di sini
+from config import *
 
 pembelian_bp = Blueprint("pembelian_bp", __name__)
 mongo = MongoConnection(MONGODB_CONNECTION_STRING, MONGODB_DATABASE_NAME)
