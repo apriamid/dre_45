@@ -62,13 +62,9 @@ function formatRupiah(angka){
 // ====================================================================================================
 //                               SYNC LOGOUT (BROADCAST CHANNEL)
 // ====================================================================================================
-// 1. Buat saluran komunikasi bernama 'auth_channel'
 const authChannel = new BroadcastChannel('auth_channel');
-
-// 2. Dengarkan pesan dari tab lain
 authChannel.onmessage = function(event) {
     if (event.data === 'logout_action') {
-        // Jika tab lain mengirim sinyal logout, tab ini juga harus keluar
         localStorage.clear();
         window.location.href = "/login";
     }
