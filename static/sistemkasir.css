@@ -10,7 +10,7 @@
     .layout-root{height:100vh; display:flex; overflow:hidden;}
     .sidebar{
       width:220px;
-      background:linear-gradient(180deg,var(--brand),#0e6f63);
+      background:linear-gradient(180deg,var(--brand),#1b5e20);
       color:#fff;
       display:flex;
       flex-direction:column;

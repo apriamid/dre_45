@@ -1,6 +1,6 @@
 import re
 from bson import ObjectId
-from datetime import datetime
+# from datetime import datetime
 
 # ========================================================================
 #                           SANITASI INPUT
@@ -210,7 +210,7 @@ def get_next_numeric_suffix_for_prefix(mongo, collection_name, id_field, prefix)
     maxn = 0
     for d in docs:
         v = d.get(id_field) or ""
-        n = _extract_number_from_id(v)
+        # n = _extract_number_from_id(v)
         if n > maxn:
             maxn = n
     return maxn + 1

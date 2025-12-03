@@ -12,7 +12,8 @@ MONGODB_COLLECTION_KARYAWAN = "master-karyawan"
 MONGODB_COLLECTION_STOK ="stok_log"
 MONGODB_COLLECTION_T_PEMBELIAN ="transaksi_pembelian"
 MONGODB_COLLECTION_T_PENJUALAN = "transaksi_penjualan"
-MONGODB_COLLECTION_LOG ="log_user"
+
+# MONGODB_COLLECTION_LOG ="log_user"
 
 
 

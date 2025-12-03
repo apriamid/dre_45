@@ -107,10 +107,12 @@ def list_pembelian():
         return jsonify([normalize(d) for d in docs]), 200
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+    
+    
 # ================================================================================
 #                                  CREATE
 # ================================================================================
-#
+
 @pembelian_bp.route("", methods=["POST"])
 def add_pembelian():
     try:
@@ -188,7 +190,6 @@ def add_pembelian():
             kode = it["kode_produk"]
             jumlah = it["jumlah"]
             harga_beli = it["harga_beli"]
-            
             # Jika produk baru, set harga jual otomatis (Contoh: Beli + 40%)
             # Jika produk lama, kita hanya update harga_beli terakhir, stok, dan update_at
             if it["is_new_product"]:

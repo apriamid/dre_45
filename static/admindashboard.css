@@ -12,16 +12,16 @@ body {
 .webix_sidebar .webix_tree_item {
     font-size: 15px !important;
     padding: 14px !important;
-    color: #ffffff !important; /* Diubah menjadi putih murni */
+    color: #ffffff !important; 
     font-weight: 500;
 }
 .webix_sidebar .webix_tree_item:hover {
-    background-color: #1b5e20 !important; /* Diatur sama dengan warna sidebar */
-    color: #ffffff !important; /* Pastikan teks tetap putih */
+    background-color: #1b5e20 !important; 
+    color: #ffffff !important; 
 }
 .webix_sidebar .webix_tree_item.webix_selected {
-    background-color: #1b5e20 !important; /* Diatur sama dengan warna sidebar */
-    color: #ffffff !important; /* Pastikan teks tetap putih */
+    background-color: #1b5e20 !important; 
+    color: #ffffff !important;
 }
 
 .webix_sidebar .webix_selected {
@@ -97,17 +97,16 @@ body {
 .webix_el_text input,
 .webix_el_select select,
 .webix_el_textarea textarea {
-    border: none !important; /* Menghilangkan garis batas utama */
-    box-shadow: none !important; /* Menghilangkan bayangan atau efek glow */
-    border-bottom: 1px solid #ddd !important; /* Opsi: Menambahkan garis bawah tipis */
-    padding: 10px 0 !important; /* Sesuaikan padding agar terlihat bersih */
+    border: none !important; 
+    box-shadow: none !important; 
+    border-bottom: 1px solid #ddd !important; 
+    padding: 10px 0 !important; 
 }
 
-/* Penting: Hilangkan border pada saat field dalam keadaan fokus (di klik) */
 .webix_el_text.webix_focused input,
 .webix_el_select.webix_focused select,
 .webix_el_textarea.webix_focused textarea {
     border: none !important;
     box-shadow: none !important;
-    border-bottom: 2px solid var(--brand, #0b615b) !important; /* Opsi: Garis bawah tebal saat fokus */
+    border-bottom: 2px solid var(--brand, #0b615b) !important; 
 }

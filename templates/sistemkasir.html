@@ -128,7 +128,7 @@
           kategori: p.kategori||p.kategori_produk||'',
           nama_produk: p.nama_produk||p.nama||('Produk '+(idx+1)),
           _id: p._id||p.id||p.kode_produk||String(idx),
-          harga_format: rupiah(Number(p.harga)||0)
+          harga_format: rupiah(Number(p.harga_jual)||0)
         }));
         renderProducts(PRODUCTS);
       }catch(e){
@@ -402,7 +402,7 @@
       }
     }
 
-    // LOGIKA NAVIGASI YANG DIPERBARUI
+    // LOGIKA NAVIGASI 
     document.querySelectorAll('.nav-item').forEach(item=>{
       item.addEventListener('click', function(){
         document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));

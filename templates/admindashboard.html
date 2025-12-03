@@ -12,6 +12,16 @@
 <body>
 
 <script>
+
+  window.addEventListener('storage', function(event) {
+    // Event ini dipicu ketika tab LAIN mengubah localStorage
+    // Jika localStorage di-clear (event.key === null) atau token/role hilang
+    if (event.key === null || !localStorage.getItem("role")) {
+        // Redirect tab ini ke login juga
+        window.location.href = "/login";
+    }
+});
+
 // ====================================================================================================
 //                                          STUB FUNCTION  
 // ====================================================================================================
@@ -42,14 +52,37 @@ function formatRupiah(angka){
 
 // =====================================================================================================
 //                                           FUNGSI LOGOUT
-// =====================================================================================================
-function logout() {
-    localStorage.clear();
-    setTimeout(() => {
-        window.location.href = "/login"; 
-    }, 500); 
-}
+// // =====================================================================================================
+// function logout() {
+//     localStorage.clear();
+//     setTimeout(() => {
+//         window.location.href = "/login"; 
+//     }, 500); 
+// }
+// ====================================================================================================
+//                               SYNC LOGOUT (BROADCAST CHANNEL)
+// ====================================================================================================
+// 1. Buat saluran komunikasi bernama 'auth_channel'
+const authChannel = new BroadcastChannel('auth_channel');
 
+// 2. Dengarkan pesan dari tab lain
+authChannel.onmessage = function(event) {
+    if (event.data === 'logout_action') {
+        // Jika tab lain mengirim sinyal logout, tab ini juga harus keluar
+        localStorage.clear();
+        window.location.href = "/login";
+    }
+};
+
+// ====================================================================================================
+//                                           FUNGSI LOGOUT
+// ====================================================================================================
+//tambahin Cross-Tab Session Synchronization
+function logout() {
+    authChannel.postMessage('logout_action');
+    localStorage.clear();
+    window.location.href = "/logout"; 
+}
 
 webix.ready(function() {
   var userRole = localStorage.getItem("role") || "superadmin";
@@ -62,6 +95,7 @@ webix.ready(function() {
     }
     return false;
   }
+  
 
   //====================================================================================================
   //                                          SIDEBAR
@@ -589,7 +623,7 @@ webix.ready(function() {
               nama_supplier:data.nama_supplier.trim(), 
               daftar_item:cleaned,
               total_pembelian:cleaned.reduce((a,b)=>a+(b.subtotal||0),0),
-              dibuat_oleh: localStorage.getItem("username") || null
+              dibuat_oleh: localStorage.getItem("username") || "Superadmin"
             };
             webix.ajax().headers({"Content-Type":"application/json"})
               .post("/api/transaksi_pembelian", JSON.stringify(payload))

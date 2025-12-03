@@ -96,7 +96,6 @@ def logout():
     token = request.cookies.get("token")
     if token:
         session_manager.remove_token(token)
-
     resp = make_response(redirect(url_for("login")))
     resp.delete_cookie("token", path="/")
     flash("Logout berhasil!", "success")
@@ -136,11 +135,9 @@ def api_me():
     token = request.cookies.get("token")
     if not token:
         return jsonify({"success": False, "message": "Unauthorized"}), 401
-
     data = session_manager.verify_token(token)
     if not data:
         return jsonify({"success": False, "message": "Invalid token"}), 401
-
     return jsonify({"success": True, "username": data["username"], "role": data["role"]}), 200
 
 
@@ -149,11 +146,9 @@ def api_userinfo():
     token = request.cookies.get("token")
     if not token:
         return jsonify({"success": False, "message": "Unauthorized"}), 401
-
     data = session_manager.verify_token(token)
     if not data:
         return jsonify({"success": False, "message": "Invalid token"}), 401
-
     return jsonify({"success": True, "username": data["username"], "role": data["role"]}), 200
 
 
