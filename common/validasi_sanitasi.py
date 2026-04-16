@@ -47,9 +47,12 @@ def is_valid_phone(value):
 
 
 def is_valid_email_gmail(email):
-    """Email wajib @gmail.com"""
+    # """Email wajib @gmail.com"""
+    # if not isinstance(email, str):
+    #     return True
+    # else:
+    #     email = email.strip()
     return isinstance(email, str) and bool(RE_EMAIL_GMAIL.match(email.strip()))
-
 
 def is_valid_number_positive(value):
     """Memastikan value adalah angka >= 0 dan bukan string negatif seperti "-0"."""

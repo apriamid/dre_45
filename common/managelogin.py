@@ -35,7 +35,7 @@ class Loginaja:
                 return user
             return None
         except Exception as e:
-            print(f"[ERROR authenticate_user]: {e}")
+            print(f"[Authentikasi error]: {e}")
             return None
 
     def check_login(self):

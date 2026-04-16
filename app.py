@@ -25,7 +25,6 @@ app.register_blueprint(laporan_bp, url_prefix="/api/laporan")
 app.register_blueprint(penjualan_bp, url_prefix="/api/penjualan")
 
 
-
 @app.before_request
 def before_request_func():
     """
@@ -110,9 +109,10 @@ def admin_dashboard():
 
     if user_role == 'kasir':
         return redirect(url_for("kasir_dashboard"))
-        
     if user_role in ('admin', 'superadmin'):
         return render_template("admindashboard.html")
+    else:
+        return redirect(url_for("login"))
     return redirect(url_for("login"))
 
 

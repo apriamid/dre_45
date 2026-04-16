@@ -25,7 +25,6 @@ def generate_karyawan_id(mongo, coll_name, jabatan=None):
     Misal: Manager -> M001, Kasir -> K001.
     Akan selalu cari nomor berikutnya agar tidak bentrok.
     """
-    import re
     if jabatan and isinstance(jabatan, str) and jabatan.strip():
         prefix = jabatan.strip()[0].upper()
         if not re.match(r'[A-Z]', prefix):

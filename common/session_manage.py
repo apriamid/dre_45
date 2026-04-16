@@ -1,12 +1,10 @@
 import jwt
 from common.mongo_connection import MongoConnection
-from config import MONGODB_CONNECTION_STRING, MONGODB_AUTH_DATABASE, MONGODB_SESSION_COLLECTION
+from config import *
 from datetime import datetime, timedelta
-
 
 class SessionManager:
     """Kelas untuk mengelola sesi pengguna menggunakan JWT dan MongoDB."""
-
     def __init__(self):
         self.auth_mongo = MongoConnection(connection_string=MONGODB_CONNECTION_STRING, db_name=MONGODB_AUTH_DATABASE)
         self.secret_key = 'kapita_secret_key'

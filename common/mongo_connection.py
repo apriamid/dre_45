@@ -1,6 +1,5 @@
 from pymongo import MongoClient
 
-
 class MongoConnection:
     """Kelas utilitas untuk mengelola koneksi dan operasi database MongoDB."""
 

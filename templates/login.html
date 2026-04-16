@@ -46,6 +46,7 @@
         msg.style.color = "red";
         return; 
     }
+     const mar =document.getElementbyID("data").value
     
     msg.textContent = "Memproses...";
     msg.style.color = "gray";
@@ -61,9 +62,6 @@
         if (res.ok && result.success) {
           msg.textContent = "Login berhasil!";
           msg.style.color = "green";
-          // localStorage.setItem("username", result.username);
-          // localStorage.setItem("role", result.role);
-          // localStorage.setItem("id_karyawan", result.id_karyawan); 
           if (result.role === "admin" || result.role === "superadmin")
             window.location.href = "/admin-dashboard";
           else if (result.role === "kasir")

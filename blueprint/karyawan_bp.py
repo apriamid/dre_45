@@ -70,7 +70,7 @@ def add_karyawan():
         user_role = getattr(g, "role", "superadmin").lower()
         jabatan = clean.get("jabatan", "").capitalize()
 
-        if jabatan not in ["Admin", "Kasir"]:
+        if jabatan not in ["Admin", "superadmin"]:
             return jsonify({"success": False, "message": "Role tidak valid. Hanya Admin atau Kasir"}), 400
 
         if user_role == "admin" and jabatan.lower() == "admin":
@@ -78,7 +78,7 @@ def add_karyawan():
                 "success": False,
                 "message": "Admin tidak diizinkan menambah pengguna dengan jabatan Admin."
             }), 403
-
+        
         new_id = generate_karyawan_id(mongo, MONGODB_COLLECTION_KARYAWAN, jabatan)
 
         clean["_id"] = new_id
@@ -116,6 +116,7 @@ def add_karyawan():
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+    
 # ==========================================================
 #                       UPDATE
 # ==========================================================
